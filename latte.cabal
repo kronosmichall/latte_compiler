@@ -1,0 +1,22 @@
+cabal-version:      3.0
+name:               latte
+version:            0.1.0.0
+license:            BSD-2-Clause
+license-file:       LICENSE
+author:             kronosmichall
+maintainer:         kronosmichall@gmail.com
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+
+program-locations: .
+
+common warnings
+    ghc-options: -Wall
+
+executable checker
+    import:           warnings
+    other-modules: Abs, ErrM, Lex, Par, Print, TypeChecker
+    build-depends:    base ^>=4.17.2.1, mtl, array, containers, process, filepath
+    main-is:          Main.hs
+    hs-source-dirs: src, latte
+    default-language: Haskell2010

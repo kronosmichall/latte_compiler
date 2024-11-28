@@ -1,0 +1,37 @@
+#!/usr/bin/env ruby
+
+`cabal build`
+path = "dist-newstyle/build/x86_64-linux/ghc-9.4.8/latte-0.1.0.0/x/checker/build/checker/checker"
+
+def red(str)
+  puts "\e[31m#{str}\e[0m"
+end
+
+def green(str)
+  puts "\e[32m#{str}\e[0m"
+end
+
+def blue(str)
+  puts "\e[34m#{str}\e[0m"
+end
+
+blue "Testing bad files"
+Dir.glob("lattests/bad/*.lat").sort.each do |f|
+  out = `#{path} #{f}`
+  if out.include?("OK")
+    red "#{f} FAILED" 
+  else
+    green "#{f} PASSED"
+  end
+end
+
+# blue "Testing good files"
+# Dir.glob("lattests/good/*.lat").sort.each do |f|
+#   blue "Testing #{f}"
+#   out = `#{path} #{f}`
+#   if out.include?("OK")
+#     green "#{f} PASSED"
+#   else
+#     red "#{f} FAILED" 
+#   end
+# end

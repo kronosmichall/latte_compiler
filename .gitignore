@@ -1,1 +1,5 @@
 mrjp-tests/
+latte-cabal
+dist-newstyle/
+lattests/
+.vscode/
