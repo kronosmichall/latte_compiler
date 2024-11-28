@@ -24,10 +24,19 @@ type Varname = String
 type RetType = Type
 type HasReturn = Bool
 
+defined :: Varname -> MyMonad Bool
+defined name = do
+    (vars, _, _) <- get
+    return $ Map.member name vars
+
 newVar :: Type -> Varname -> Initialized -> MyMonad ()
 newVar typ name val = do
-    (vars, ret, hret) <- get
-    put (Map.insert name (typ, val) vars, ret, hret)
+    def <- defined name
+    if def
+        then error $ "Variable " ++ name ++ " already declared"
+        else do
+            (vars, ret, hret) <- get
+            put (Map.insert name (typ, val) vars, ret, hret)
 
 newVarNoInit :: Type -> Varname -> MyMonad ()
 newVarNoInit typ name = newVar typ name False
@@ -40,7 +49,7 @@ declareItem typ (NoInit (Ident name)) = newVarNoInit typ name
 declareItem typ (Init (Ident name) expr) = do
     exprTyp <- eval expr
     if typ /= exprTyp
-        then error "Type mismatch"
+        then error $ "Type mismatch: expected " ++ show typ ++ ", but got " ++ show exprTyp
         else newVarInit typ name
 
 varType :: Varname -> MyMonad Type
@@ -60,25 +69,25 @@ eval (EString _) = return Str
 eval (Neg e) = do
     typ <- eval e
     if typ /= Bool
-        then error "Type mismatch"
+        then error $ "Type mismatch: expected Bool, but got " ++ show typ
         else return Bool
 eval (Not e) = do
     typ <- eval e
     if typ /= Int
-        then error "Type mismatch"
+        then error $ "Type mismatch: expected Int, but got " ++ show typ
         else return Int
 eval (EMul e1 _ e2) = do
     typ1 <- eval e1
     typ2 <- eval e2
     if typ1 /= Int || typ2 /= Int
-        then error "Type mismatch"
+        then error $ "Type mismatch: expected Int, but got " ++ show typ1 ++ " and " ++ show typ2
         else return Int
 
 eval (EAdd e1 _ e2) = do
     typ1 <- eval e1
     typ2 <- eval e2
     if (typ1 /= Int && typ1 /= Str) || typ1 /= typ2
-        then error "Type mismatch"
+        then error $ "Type mismatch: expected " ++ show typ1 ++ ", but got " ++ show typ2
         else return Int
 
 eval (ERel e1 op e2) = do
@@ -86,20 +95,20 @@ eval (ERel e1 op e2) = do
     typ2 <- eval e2
     case op of 
         EQU -> if typ1 /= typ2
-            then error "Type mismatch"
+            then error $ "Type mismatch: expected " ++ show typ1 ++ ", but got " ++ show typ2
             else return Bool
         NE -> if typ1 /= typ2
-            then error "Type mismatch"
+            then error $ "Type mismatch: expected " ++ show typ1 ++ ", but got " ++ show typ2
             else return Bool
         _ -> if typ1 /= Int || typ2 /= Int
-            then error "Type mismatch"
+            then error $ "Type mismatch: expected Int, but got " ++ show typ1 ++ " and " ++ show typ2
             else return Bool
 
 eval (EAnd e1 e2) = do
     typ1 <- eval e1
     typ2 <- eval e2
     if typ1 /= Bool || typ2 /= Bool
-        then error "Type mismatch"
+        then error $ "Type mismatch: expected Bool, but got " ++ show typ1 ++ " and " ++ show typ2
         else return Bool
 
 eval (EOr e1 e2) = eval (EAnd e1 e2)
@@ -110,14 +119,13 @@ getFunType (Ident name) exprs = do
     case typ of
         Fun typ' args -> do
             if length args /= length exprs
-                then error "Wrong number of arguments"
+                then error $ "Wrong number of arguments: expected " ++ show (length args) ++ ", but got " ++ show (length exprs)
                 else do
                     types <- mapM eval exprs
                     if types /= args
-                        then error "Type mismatch"
+                        then error $ "Type mismatch in arguments: expected " ++ show args ++ ", but got " ++ show types
                         else return typ'
-        _ -> error "Not a function"
-
+        _ -> error $ "Not a function: " ++ name
 
 exec :: [Stmt] -> MyMonad ()
 exec [] = return ()
@@ -134,12 +142,12 @@ exec (Ass (Ident name) expr : xs) = do
     typ1 <- varType name
     typ2 <- eval expr
     if typ1 /= typ2
-        then error "Type mismatch"
+        then error $ "Type mismatch in assignment: expected " ++ show typ1 ++ ", but got " ++ show typ2
         else exec xs
 exec (Incr (Ident name) : xs) = do
     typ <- varType name
     if typ /= Int
-        then error "Type mismatch"
+        then error $ "Type mismatch: expected Int for increment, but got " ++ show typ
         else exec xs
 exec (Decr ident : xs) = exec(Incr ident : xs)
 exec (Ret expr : xs) = do
@@ -147,21 +155,27 @@ exec (Ret expr : xs) = do
     typ <- eval expr
     put (vars, ret, True)
     if typ /= ret
-        then error "Type mismatch"
+        then error $ "Type mismatch in return: expected " ++ show ret ++ ", but got " ++ show typ
         else exec xs
 exec (VRet : xs) = do
     (_, ret, _) <- get
     if ret /= Void
-        then error "Type mismatch"
+        then error $ "Type mismatch: expected Void return type, but got " ++ show ret
         else exec xs
 exec (Cond expr stmt : xs) = do
     typ <- eval expr
+    (vars, ret, hret) <- get
+    -- is true expr?
     if typ /= Bool
-        then error "Type mismatch"
-        else exec (stmt : xs)
+        then error $ "Type mismatch in condition: expected Bool, but got " ++ show typ
+        else exec [stmt]
+    put(vars, ret, hret)
+    exec xs
+
 
 exec (CondElse _ stmt1 stmt2 : xs) = do
     (vars, ret, hret) <- get
+    -- is true expr?
     exec [stmt1]
     (_, _, hret1) <- get
     exec [stmt2]
