@@ -201,6 +201,7 @@ exec (CondElse expr stmt1 stmt2 : xs) = do
             (_, _, hret1) <- get
             exec [stmt2]
             (_, _, hret2) <- get
+            trace (show hret1 ++ " " ++ show hret2) $ return ()
             put (vars, ret, hret || (hret1 && hret2))
         
     exec xs
