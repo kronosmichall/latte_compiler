@@ -8,5 +8,6 @@ all:
 # Clean rule
 clean:
 	rm -r build
+	rm latc
 
 .PHONY: all clean clean_test

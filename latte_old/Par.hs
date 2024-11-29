@@ -22,26 +22,26 @@ import Control.Monad (ap)
 data HappyAbsSyn 
 	= HappyTerminal (Token)
 	| HappyErrorToken Prelude.Int
-	| HappyAbsSyn4 ((Abs.BNFC'Position, Abs.Ident))
-	| HappyAbsSyn5 ((Abs.BNFC'Position, Integer))
-	| HappyAbsSyn6 ((Abs.BNFC'Position, String))
-	| HappyAbsSyn7 ((Abs.BNFC'Position, Abs.Program))
-	| HappyAbsSyn8 ((Abs.BNFC'Position, Abs.TopDef))
-	| HappyAbsSyn9 ((Abs.BNFC'Position, [Abs.TopDef]))
-	| HappyAbsSyn10 ((Abs.BNFC'Position, Abs.Arg))
-	| HappyAbsSyn11 ((Abs.BNFC'Position, [Abs.Arg]))
-	| HappyAbsSyn12 ((Abs.BNFC'Position, Abs.Block))
-	| HappyAbsSyn13 ((Abs.BNFC'Position, [Abs.Stmt]))
-	| HappyAbsSyn14 ((Abs.BNFC'Position, Abs.Stmt))
-	| HappyAbsSyn15 ((Abs.BNFC'Position, Abs.Item))
-	| HappyAbsSyn16 ((Abs.BNFC'Position, [Abs.Item]))
-	| HappyAbsSyn17 ((Abs.BNFC'Position, Abs.Type))
-	| HappyAbsSyn18 ((Abs.BNFC'Position, [Abs.Type]))
-	| HappyAbsSyn19 ((Abs.BNFC'Position, Abs.Expr))
-	| HappyAbsSyn26 ((Abs.BNFC'Position, [Abs.Expr]))
-	| HappyAbsSyn27 ((Abs.BNFC'Position, Abs.AddOp))
-	| HappyAbsSyn28 ((Abs.BNFC'Position, Abs.MulOp))
-	| HappyAbsSyn29 ((Abs.BNFC'Position, Abs.RelOp))
+	| HappyAbsSyn4 (Abs.Ident)
+	| HappyAbsSyn5 (Integer)
+	| HappyAbsSyn6 (String)
+	| HappyAbsSyn7 (Abs.Program)
+	| HappyAbsSyn8 (Abs.TopDef)
+	| HappyAbsSyn9 ([Abs.TopDef])
+	| HappyAbsSyn10 (Abs.Arg)
+	| HappyAbsSyn11 ([Abs.Arg])
+	| HappyAbsSyn12 (Abs.Block)
+	| HappyAbsSyn13 ([Abs.Stmt])
+	| HappyAbsSyn14 (Abs.Stmt)
+	| HappyAbsSyn15 (Abs.Item)
+	| HappyAbsSyn16 ([Abs.Item])
+	| HappyAbsSyn17 (Abs.Type)
+	| HappyAbsSyn18 ([Abs.Type])
+	| HappyAbsSyn19 (Abs.Expr)
+	| HappyAbsSyn26 ([Abs.Expr])
+	| HappyAbsSyn27 (Abs.AddOp)
+	| HappyAbsSyn28 (Abs.MulOp)
+	| HappyAbsSyn29 (Abs.RelOp)
 
 {- to allow type-synonyms as our monads (likely
  - with explicitly-specified bind and return)
@@ -261,7 +261,7 @@ happyExpList = Happy_Data_Array.listArray (0,386) ([0,0,0,674,0,0,0,0,1,0,0,0,0,
 {-# NOINLINE happyExpListPerState #-}
 happyExpListPerState st =
     token_strs_expected
-  where token_strs = ["error","%dummy","%start_pProgram_internal","Ident","Integer","String","Program","TopDef","ListTopDef","Arg","ListArg","Block","ListStmt","Stmt","Item","ListItem","Type","ListType","Expr6","Expr5","Expr4","Expr3","Expr2","Expr1","Expr","ListExpr","AddOp","MulOp","RelOp","'!'","'!='","'%'","'&&'","'('","')'","'*'","'+'","'++'","','","'-'","'--'","'/'","';'","'<'","'<='","'='","'=='","'>'","'>='","'boolean'","'else'","'false'","'if'","'int'","'return'","'string'","'true'","'void'","'while'","'{'","'||'","'}'","L_Ident","L_integ","L_quoted","%eof"]
+  where token_strs = ["error","%dummy","%start_pProgram","Ident","Integer","String","Program","TopDef","ListTopDef","Arg","ListArg","Block","ListStmt","Stmt","Item","ListItem","Type","ListType","Expr6","Expr5","Expr4","Expr3","Expr2","Expr1","Expr","ListExpr","AddOp","MulOp","RelOp","'!'","'!='","'%'","'&&'","'('","')'","'*'","'+'","'++'","','","'-'","'--'","'/'","';'","'<'","'<='","'='","'=='","'>'","'>='","'boolean'","'else'","'false'","'if'","'int'","'return'","'string'","'true'","'void'","'while'","'{'","'||'","'}'","L_Ident","L_integ","L_quoted","%eof"]
         bit_start = st Prelude.* 66
         bit_end = (st Prelude.+ 1) Prelude.* 66
         read_bit = readArrayBit happyExpList
@@ -983,30 +983,30 @@ action_109 _ = happyFail (happyExpListPerState 109)
 action_110 _ = happyReduce_24
 
 happyReduce_1 = happySpecReduce_1  4 happyReduction_1
-happyReduction_1 (HappyTerminal happy_var_1)
+happyReduction_1 (HappyTerminal (PT _ (TV happy_var_1)))
 	 =  HappyAbsSyn4
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.Ident (tokenText happy_var_1))
+		 (Abs.Ident happy_var_1
 	)
 happyReduction_1 _  = notHappyAtAll 
 
 happyReduce_2 = happySpecReduce_1  5 happyReduction_2
-happyReduction_2 (HappyTerminal happy_var_1)
+happyReduction_2 (HappyTerminal (PT _ (TI happy_var_1)))
 	 =  HappyAbsSyn5
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), (read (tokenText happy_var_1)) :: Integer)
+		 ((read happy_var_1) :: Integer
 	)
 happyReduction_2 _  = notHappyAtAll 
 
 happyReduce_3 = happySpecReduce_1  6 happyReduction_3
-happyReduction_3 (HappyTerminal happy_var_1)
+happyReduction_3 (HappyTerminal (PT _ (TL happy_var_1)))
 	 =  HappyAbsSyn6
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), ((\(PT _ (TL s)) -> s) happy_var_1))
+		 (happy_var_1
 	)
 happyReduction_3 _  = notHappyAtAll 
 
 happyReduce_4 = happySpecReduce_1  7 happyReduction_4
 happyReduction_4 (HappyAbsSyn9  happy_var_1)
 	 =  HappyAbsSyn7
-		 ((fst happy_var_1, Abs.Program (fst happy_var_1) (snd happy_var_1))
+		 (Abs.Program happy_var_1
 	)
 happyReduction_4 _  = notHappyAtAll 
 
@@ -1019,13 +1019,13 @@ happyReduction_5 ((HappyAbsSyn12  happy_var_6) `HappyStk`
 	(HappyAbsSyn17  happy_var_1) `HappyStk`
 	happyRest)
 	 = HappyAbsSyn8
-		 ((fst happy_var_1, Abs.FnDef (fst happy_var_1) (snd happy_var_1) (snd happy_var_2) (snd happy_var_4) (snd happy_var_6))
+		 (Abs.FnDef happy_var_1 happy_var_2 happy_var_4 happy_var_6
 	) `HappyStk` happyRest
 
 happyReduce_6 = happySpecReduce_1  9 happyReduction_6
 happyReduction_6 (HappyAbsSyn8  happy_var_1)
 	 =  HappyAbsSyn9
-		 ((fst happy_var_1, (:[]) (snd happy_var_1))
+		 ((:[]) happy_var_1
 	)
 happyReduction_6 _  = notHappyAtAll 
 
@@ -1033,7 +1033,7 @@ happyReduce_7 = happySpecReduce_2  9 happyReduction_7
 happyReduction_7 (HappyAbsSyn9  happy_var_2)
 	(HappyAbsSyn8  happy_var_1)
 	 =  HappyAbsSyn9
-		 ((fst happy_var_1, (:) (snd happy_var_1) (snd happy_var_2))
+		 ((:) happy_var_1 happy_var_2
 	)
 happyReduction_7 _ _  = notHappyAtAll 
 
@@ -1041,19 +1041,19 @@ happyReduce_8 = happySpecReduce_2  10 happyReduction_8
 happyReduction_8 (HappyAbsSyn4  happy_var_2)
 	(HappyAbsSyn17  happy_var_1)
 	 =  HappyAbsSyn10
-		 ((fst happy_var_1, Abs.Arg (fst happy_var_1) (snd happy_var_1) (snd happy_var_2))
+		 (Abs.Arg happy_var_1 happy_var_2
 	)
 happyReduction_8 _ _  = notHappyAtAll 
 
 happyReduce_9 = happySpecReduce_0  11 happyReduction_9
 happyReduction_9  =  HappyAbsSyn11
-		 ((Abs.BNFC'NoPosition, [])
+		 ([]
 	)
 
 happyReduce_10 = happySpecReduce_1  11 happyReduction_10
 happyReduction_10 (HappyAbsSyn10  happy_var_1)
 	 =  HappyAbsSyn11
-		 ((fst happy_var_1, (:[]) (snd happy_var_1))
+		 ((:[]) happy_var_1
 	)
 happyReduction_10 _  = notHappyAtAll 
 
@@ -1062,43 +1062,42 @@ happyReduction_11 (HappyAbsSyn11  happy_var_3)
 	_
 	(HappyAbsSyn10  happy_var_1)
 	 =  HappyAbsSyn11
-		 ((fst happy_var_1, (:) (snd happy_var_1) (snd happy_var_3))
+		 ((:) happy_var_1 happy_var_3
 	)
 happyReduction_11 _ _ _  = notHappyAtAll 
 
 happyReduce_12 = happySpecReduce_3  12 happyReduction_12
 happyReduction_12 _
 	(HappyAbsSyn13  happy_var_2)
-	(HappyTerminal happy_var_1)
+	_
 	 =  HappyAbsSyn12
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.Block (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)) (snd happy_var_2))
+		 (Abs.Block happy_var_2
 	)
 happyReduction_12 _ _ _  = notHappyAtAll 
 
 happyReduce_13 = happySpecReduce_0  13 happyReduction_13
 happyReduction_13  =  HappyAbsSyn13
-		 ((Abs.BNFC'NoPosition, [])
+		 ([]
 	)
 
 happyReduce_14 = happySpecReduce_2  13 happyReduction_14
 happyReduction_14 (HappyAbsSyn13  happy_var_2)
 	(HappyAbsSyn14  happy_var_1)
 	 =  HappyAbsSyn13
-		 ((fst happy_var_1, (:) (snd happy_var_1) (snd happy_var_2))
+		 ((:) happy_var_1 happy_var_2
 	)
 happyReduction_14 _ _  = notHappyAtAll 
 
 happyReduce_15 = happySpecReduce_1  14 happyReduction_15
-happyReduction_15 (HappyTerminal happy_var_1)
+happyReduction_15 _
 	 =  HappyAbsSyn14
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.Empty (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)))
+		 (Abs.Empty
 	)
-happyReduction_15 _  = notHappyAtAll 
 
 happyReduce_16 = happySpecReduce_1  14 happyReduction_16
 happyReduction_16 (HappyAbsSyn12  happy_var_1)
 	 =  HappyAbsSyn14
-		 ((fst happy_var_1, Abs.BStmt (fst happy_var_1) (snd happy_var_1))
+		 (Abs.BStmt happy_var_1
 	)
 happyReduction_16 _  = notHappyAtAll 
 
@@ -1107,7 +1106,7 @@ happyReduction_17 _
 	(HappyAbsSyn16  happy_var_2)
 	(HappyAbsSyn17  happy_var_1)
 	 =  HappyAbsSyn14
-		 ((fst happy_var_1, Abs.Decl (fst happy_var_1) (snd happy_var_1) (snd happy_var_2))
+		 (Abs.Decl happy_var_1 happy_var_2
 	)
 happyReduction_17 _ _ _  = notHappyAtAll 
 
@@ -1118,7 +1117,7 @@ happyReduction_18 (_ `HappyStk`
 	(HappyAbsSyn4  happy_var_1) `HappyStk`
 	happyRest)
 	 = HappyAbsSyn14
-		 ((fst happy_var_1, Abs.Ass (fst happy_var_1) (snd happy_var_1) (snd happy_var_3))
+		 (Abs.Ass happy_var_1 happy_var_3
 	) `HappyStk` happyRest
 
 happyReduce_19 = happySpecReduce_3  14 happyReduction_19
@@ -1126,7 +1125,7 @@ happyReduction_19 _
 	_
 	(HappyAbsSyn4  happy_var_1)
 	 =  HappyAbsSyn14
-		 ((fst happy_var_1, Abs.Incr (fst happy_var_1) (snd happy_var_1))
+		 (Abs.Incr happy_var_1
 	)
 happyReduction_19 _ _ _  = notHappyAtAll 
 
@@ -1135,36 +1134,35 @@ happyReduction_20 _
 	_
 	(HappyAbsSyn4  happy_var_1)
 	 =  HappyAbsSyn14
-		 ((fst happy_var_1, Abs.Decr (fst happy_var_1) (snd happy_var_1))
+		 (Abs.Decr happy_var_1
 	)
 happyReduction_20 _ _ _  = notHappyAtAll 
 
 happyReduce_21 = happySpecReduce_3  14 happyReduction_21
 happyReduction_21 _
 	(HappyAbsSyn19  happy_var_2)
-	(HappyTerminal happy_var_1)
+	_
 	 =  HappyAbsSyn14
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.Ret (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)) (snd happy_var_2))
+		 (Abs.Ret happy_var_2
 	)
 happyReduction_21 _ _ _  = notHappyAtAll 
 
 happyReduce_22 = happySpecReduce_2  14 happyReduction_22
 happyReduction_22 _
-	(HappyTerminal happy_var_1)
+	_
 	 =  HappyAbsSyn14
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.VRet (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)))
+		 (Abs.VRet
 	)
-happyReduction_22 _ _  = notHappyAtAll 
 
 happyReduce_23 = happyReduce 5 14 happyReduction_23
 happyReduction_23 ((HappyAbsSyn14  happy_var_5) `HappyStk`
 	_ `HappyStk`
 	(HappyAbsSyn19  happy_var_3) `HappyStk`
 	_ `HappyStk`
-	(HappyTerminal happy_var_1) `HappyStk`
+	_ `HappyStk`
 	happyRest)
 	 = HappyAbsSyn14
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.Cond (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)) (snd happy_var_3) (snd happy_var_5))
+		 (Abs.Cond happy_var_3 happy_var_5
 	) `HappyStk` happyRest
 
 happyReduce_24 = happyReduce 7 14 happyReduction_24
@@ -1174,10 +1172,10 @@ happyReduction_24 ((HappyAbsSyn14  happy_var_7) `HappyStk`
 	_ `HappyStk`
 	(HappyAbsSyn19  happy_var_3) `HappyStk`
 	_ `HappyStk`
-	(HappyTerminal happy_var_1) `HappyStk`
+	_ `HappyStk`
 	happyRest)
 	 = HappyAbsSyn14
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.CondElse (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)) (snd happy_var_3) (snd happy_var_5) (snd happy_var_7))
+		 (Abs.CondElse happy_var_3 happy_var_5 happy_var_7
 	) `HappyStk` happyRest
 
 happyReduce_25 = happyReduce 5 14 happyReduction_25
@@ -1185,24 +1183,24 @@ happyReduction_25 ((HappyAbsSyn14  happy_var_5) `HappyStk`
 	_ `HappyStk`
 	(HappyAbsSyn19  happy_var_3) `HappyStk`
 	_ `HappyStk`
-	(HappyTerminal happy_var_1) `HappyStk`
+	_ `HappyStk`
 	happyRest)
 	 = HappyAbsSyn14
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.While (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)) (snd happy_var_3) (snd happy_var_5))
+		 (Abs.While happy_var_3 happy_var_5
 	) `HappyStk` happyRest
 
 happyReduce_26 = happySpecReduce_2  14 happyReduction_26
 happyReduction_26 _
 	(HappyAbsSyn19  happy_var_1)
 	 =  HappyAbsSyn14
-		 ((fst happy_var_1, Abs.SExp (fst happy_var_1) (snd happy_var_1))
+		 (Abs.SExp happy_var_1
 	)
 happyReduction_26 _ _  = notHappyAtAll 
 
 happyReduce_27 = happySpecReduce_1  15 happyReduction_27
 happyReduction_27 (HappyAbsSyn4  happy_var_1)
 	 =  HappyAbsSyn15
-		 ((fst happy_var_1, Abs.NoInit (fst happy_var_1) (snd happy_var_1))
+		 (Abs.NoInit happy_var_1
 	)
 happyReduction_27 _  = notHappyAtAll 
 
@@ -1211,14 +1209,14 @@ happyReduction_28 (HappyAbsSyn19  happy_var_3)
 	_
 	(HappyAbsSyn4  happy_var_1)
 	 =  HappyAbsSyn15
-		 ((fst happy_var_1, Abs.Init (fst happy_var_1) (snd happy_var_1) (snd happy_var_3))
+		 (Abs.Init happy_var_1 happy_var_3
 	)
 happyReduction_28 _ _ _  = notHappyAtAll 
 
 happyReduce_29 = happySpecReduce_1  16 happyReduction_29
 happyReduction_29 (HappyAbsSyn15  happy_var_1)
 	 =  HappyAbsSyn16
-		 ((fst happy_var_1, (:[]) (snd happy_var_1))
+		 ((:[]) happy_var_1
 	)
 happyReduction_29 _  = notHappyAtAll 
 
@@ -1227,47 +1225,43 @@ happyReduction_30 (HappyAbsSyn16  happy_var_3)
 	_
 	(HappyAbsSyn15  happy_var_1)
 	 =  HappyAbsSyn16
-		 ((fst happy_var_1, (:) (snd happy_var_1) (snd happy_var_3))
+		 ((:) happy_var_1 happy_var_3
 	)
 happyReduction_30 _ _ _  = notHappyAtAll 
 
 happyReduce_31 = happySpecReduce_1  17 happyReduction_31
-happyReduction_31 (HappyTerminal happy_var_1)
+happyReduction_31 _
 	 =  HappyAbsSyn17
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.Int (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)))
+		 (Abs.Int
 	)
-happyReduction_31 _  = notHappyAtAll 
 
 happyReduce_32 = happySpecReduce_1  17 happyReduction_32
-happyReduction_32 (HappyTerminal happy_var_1)
+happyReduction_32 _
 	 =  HappyAbsSyn17
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.Str (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)))
+		 (Abs.Str
 	)
-happyReduction_32 _  = notHappyAtAll 
 
 happyReduce_33 = happySpecReduce_1  17 happyReduction_33
-happyReduction_33 (HappyTerminal happy_var_1)
+happyReduction_33 _
 	 =  HappyAbsSyn17
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.Bool (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)))
+		 (Abs.Bool
 	)
-happyReduction_33 _  = notHappyAtAll 
 
 happyReduce_34 = happySpecReduce_1  17 happyReduction_34
-happyReduction_34 (HappyTerminal happy_var_1)
+happyReduction_34 _
 	 =  HappyAbsSyn17
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.Void (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)))
+		 (Abs.Void
 	)
-happyReduction_34 _  = notHappyAtAll 
 
 happyReduce_35 = happySpecReduce_0  18 happyReduction_35
 happyReduction_35  =  HappyAbsSyn18
-		 ((Abs.BNFC'NoPosition, [])
+		 ([]
 	)
 
 happyReduce_36 = happySpecReduce_1  18 happyReduction_36
 happyReduction_36 (HappyAbsSyn17  happy_var_1)
 	 =  HappyAbsSyn18
-		 ((fst happy_var_1, (:[]) (snd happy_var_1))
+		 ((:[]) happy_var_1
 	)
 happyReduction_36 _  = notHappyAtAll 
 
@@ -1276,37 +1270,35 @@ happyReduction_37 (HappyAbsSyn18  happy_var_3)
 	_
 	(HappyAbsSyn17  happy_var_1)
 	 =  HappyAbsSyn18
-		 ((fst happy_var_1, (:) (snd happy_var_1) (snd happy_var_3))
+		 ((:) happy_var_1 happy_var_3
 	)
 happyReduction_37 _ _ _  = notHappyAtAll 
 
 happyReduce_38 = happySpecReduce_1  19 happyReduction_38
 happyReduction_38 (HappyAbsSyn4  happy_var_1)
 	 =  HappyAbsSyn19
-		 ((fst happy_var_1, Abs.EVar (fst happy_var_1) (snd happy_var_1))
+		 (Abs.EVar happy_var_1
 	)
 happyReduction_38 _  = notHappyAtAll 
 
 happyReduce_39 = happySpecReduce_1  19 happyReduction_39
 happyReduction_39 (HappyAbsSyn5  happy_var_1)
 	 =  HappyAbsSyn19
-		 ((fst happy_var_1, Abs.ELitInt (fst happy_var_1) (snd happy_var_1))
+		 (Abs.ELitInt happy_var_1
 	)
 happyReduction_39 _  = notHappyAtAll 
 
 happyReduce_40 = happySpecReduce_1  19 happyReduction_40
-happyReduction_40 (HappyTerminal happy_var_1)
+happyReduction_40 _
 	 =  HappyAbsSyn19
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.ELitTrue (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)))
+		 (Abs.ELitTrue
 	)
-happyReduction_40 _  = notHappyAtAll 
 
 happyReduce_41 = happySpecReduce_1  19 happyReduction_41
-happyReduction_41 (HappyTerminal happy_var_1)
+happyReduction_41 _
 	 =  HappyAbsSyn19
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.ELitFalse (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)))
+		 (Abs.ELitFalse
 	)
-happyReduction_41 _  = notHappyAtAll 
 
 happyReduce_42 = happyReduce 4 19 happyReduction_42
 happyReduction_42 (_ `HappyStk`
@@ -1315,45 +1307,45 @@ happyReduction_42 (_ `HappyStk`
 	(HappyAbsSyn4  happy_var_1) `HappyStk`
 	happyRest)
 	 = HappyAbsSyn19
-		 ((fst happy_var_1, Abs.EApp (fst happy_var_1) (snd happy_var_1) (snd happy_var_3))
+		 (Abs.EApp happy_var_1 happy_var_3
 	) `HappyStk` happyRest
 
 happyReduce_43 = happySpecReduce_1  19 happyReduction_43
 happyReduction_43 (HappyAbsSyn6  happy_var_1)
 	 =  HappyAbsSyn19
-		 ((fst happy_var_1, Abs.EString (fst happy_var_1) (snd happy_var_1))
+		 (Abs.EString happy_var_1
 	)
 happyReduction_43 _  = notHappyAtAll 
 
 happyReduce_44 = happySpecReduce_3  19 happyReduction_44
 happyReduction_44 _
 	(HappyAbsSyn19  happy_var_2)
-	(HappyTerminal happy_var_1)
+	_
 	 =  HappyAbsSyn19
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), (snd happy_var_2))
+		 (happy_var_2
 	)
 happyReduction_44 _ _ _  = notHappyAtAll 
 
 happyReduce_45 = happySpecReduce_2  20 happyReduction_45
 happyReduction_45 (HappyAbsSyn19  happy_var_2)
-	(HappyTerminal happy_var_1)
+	_
 	 =  HappyAbsSyn19
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.Neg (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)) (snd happy_var_2))
+		 (Abs.Neg happy_var_2
 	)
 happyReduction_45 _ _  = notHappyAtAll 
 
 happyReduce_46 = happySpecReduce_2  20 happyReduction_46
 happyReduction_46 (HappyAbsSyn19  happy_var_2)
-	(HappyTerminal happy_var_1)
+	_
 	 =  HappyAbsSyn19
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.Not (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)) (snd happy_var_2))
+		 (Abs.Not happy_var_2
 	)
 happyReduction_46 _ _  = notHappyAtAll 
 
 happyReduce_47 = happySpecReduce_1  20 happyReduction_47
 happyReduction_47 (HappyAbsSyn19  happy_var_1)
 	 =  HappyAbsSyn19
-		 ((fst happy_var_1, (snd happy_var_1))
+		 (happy_var_1
 	)
 happyReduction_47 _  = notHappyAtAll 
 
@@ -1362,14 +1354,14 @@ happyReduction_48 (HappyAbsSyn19  happy_var_3)
 	(HappyAbsSyn28  happy_var_2)
 	(HappyAbsSyn19  happy_var_1)
 	 =  HappyAbsSyn19
-		 ((fst happy_var_1, Abs.EMul (fst happy_var_1) (snd happy_var_1) (snd happy_var_2) (snd happy_var_3))
+		 (Abs.EMul happy_var_1 happy_var_2 happy_var_3
 	)
 happyReduction_48 _ _ _  = notHappyAtAll 
 
 happyReduce_49 = happySpecReduce_1  21 happyReduction_49
 happyReduction_49 (HappyAbsSyn19  happy_var_1)
 	 =  HappyAbsSyn19
-		 ((fst happy_var_1, (snd happy_var_1))
+		 (happy_var_1
 	)
 happyReduction_49 _  = notHappyAtAll 
 
@@ -1378,14 +1370,14 @@ happyReduction_50 (HappyAbsSyn19  happy_var_3)
 	(HappyAbsSyn27  happy_var_2)
 	(HappyAbsSyn19  happy_var_1)
 	 =  HappyAbsSyn19
-		 ((fst happy_var_1, Abs.EAdd (fst happy_var_1) (snd happy_var_1) (snd happy_var_2) (snd happy_var_3))
+		 (Abs.EAdd happy_var_1 happy_var_2 happy_var_3
 	)
 happyReduction_50 _ _ _  = notHappyAtAll 
 
 happyReduce_51 = happySpecReduce_1  22 happyReduction_51
 happyReduction_51 (HappyAbsSyn19  happy_var_1)
 	 =  HappyAbsSyn19
-		 ((fst happy_var_1, (snd happy_var_1))
+		 (happy_var_1
 	)
 happyReduction_51 _  = notHappyAtAll 
 
@@ -1394,14 +1386,14 @@ happyReduction_52 (HappyAbsSyn19  happy_var_3)
 	(HappyAbsSyn29  happy_var_2)
 	(HappyAbsSyn19  happy_var_1)
 	 =  HappyAbsSyn19
-		 ((fst happy_var_1, Abs.ERel (fst happy_var_1) (snd happy_var_1) (snd happy_var_2) (snd happy_var_3))
+		 (Abs.ERel happy_var_1 happy_var_2 happy_var_3
 	)
 happyReduction_52 _ _ _  = notHappyAtAll 
 
 happyReduce_53 = happySpecReduce_1  23 happyReduction_53
 happyReduction_53 (HappyAbsSyn19  happy_var_1)
 	 =  HappyAbsSyn19
-		 ((fst happy_var_1, (snd happy_var_1))
+		 (happy_var_1
 	)
 happyReduction_53 _  = notHappyAtAll 
 
@@ -1410,14 +1402,14 @@ happyReduction_54 (HappyAbsSyn19  happy_var_3)
 	_
 	(HappyAbsSyn19  happy_var_1)
 	 =  HappyAbsSyn19
-		 ((fst happy_var_1, Abs.EAnd (fst happy_var_1) (snd happy_var_1) (snd happy_var_3))
+		 (Abs.EAnd happy_var_1 happy_var_3
 	)
 happyReduction_54 _ _ _  = notHappyAtAll 
 
 happyReduce_55 = happySpecReduce_1  24 happyReduction_55
 happyReduction_55 (HappyAbsSyn19  happy_var_1)
 	 =  HappyAbsSyn19
-		 ((fst happy_var_1, (snd happy_var_1))
+		 (happy_var_1
 	)
 happyReduction_55 _  = notHappyAtAll 
 
@@ -1426,26 +1418,26 @@ happyReduction_56 (HappyAbsSyn19  happy_var_3)
 	_
 	(HappyAbsSyn19  happy_var_1)
 	 =  HappyAbsSyn19
-		 ((fst happy_var_1, Abs.EOr (fst happy_var_1) (snd happy_var_1) (snd happy_var_3))
+		 (Abs.EOr happy_var_1 happy_var_3
 	)
 happyReduction_56 _ _ _  = notHappyAtAll 
 
 happyReduce_57 = happySpecReduce_1  25 happyReduction_57
 happyReduction_57 (HappyAbsSyn19  happy_var_1)
 	 =  HappyAbsSyn19
-		 ((fst happy_var_1, (snd happy_var_1))
+		 (happy_var_1
 	)
 happyReduction_57 _  = notHappyAtAll 
 
 happyReduce_58 = happySpecReduce_0  26 happyReduction_58
 happyReduction_58  =  HappyAbsSyn26
-		 ((Abs.BNFC'NoPosition, [])
+		 ([]
 	)
 
 happyReduce_59 = happySpecReduce_1  26 happyReduction_59
 happyReduction_59 (HappyAbsSyn19  happy_var_1)
 	 =  HappyAbsSyn26
-		 ((fst happy_var_1, (:[]) (snd happy_var_1))
+		 ((:[]) happy_var_1
 	)
 happyReduction_59 _  = notHappyAtAll 
 
@@ -1454,86 +1446,75 @@ happyReduction_60 (HappyAbsSyn26  happy_var_3)
 	_
 	(HappyAbsSyn19  happy_var_1)
 	 =  HappyAbsSyn26
-		 ((fst happy_var_1, (:) (snd happy_var_1) (snd happy_var_3))
+		 ((:) happy_var_1 happy_var_3
 	)
 happyReduction_60 _ _ _  = notHappyAtAll 
 
 happyReduce_61 = happySpecReduce_1  27 happyReduction_61
-happyReduction_61 (HappyTerminal happy_var_1)
+happyReduction_61 _
 	 =  HappyAbsSyn27
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.Plus (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)))
+		 (Abs.Plus
 	)
-happyReduction_61 _  = notHappyAtAll 
 
 happyReduce_62 = happySpecReduce_1  27 happyReduction_62
-happyReduction_62 (HappyTerminal happy_var_1)
+happyReduction_62 _
 	 =  HappyAbsSyn27
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.Minus (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)))
+		 (Abs.Minus
 	)
-happyReduction_62 _  = notHappyAtAll 
 
 happyReduce_63 = happySpecReduce_1  28 happyReduction_63
-happyReduction_63 (HappyTerminal happy_var_1)
+happyReduction_63 _
 	 =  HappyAbsSyn28
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.Times (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)))
+		 (Abs.Times
 	)
-happyReduction_63 _  = notHappyAtAll 
 
 happyReduce_64 = happySpecReduce_1  28 happyReduction_64
-happyReduction_64 (HappyTerminal happy_var_1)
+happyReduction_64 _
 	 =  HappyAbsSyn28
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.Div (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)))
+		 (Abs.Div
 	)
-happyReduction_64 _  = notHappyAtAll 
 
 happyReduce_65 = happySpecReduce_1  28 happyReduction_65
-happyReduction_65 (HappyTerminal happy_var_1)
+happyReduction_65 _
 	 =  HappyAbsSyn28
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.Mod (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)))
+		 (Abs.Mod
 	)
-happyReduction_65 _  = notHappyAtAll 
 
 happyReduce_66 = happySpecReduce_1  29 happyReduction_66
-happyReduction_66 (HappyTerminal happy_var_1)
+happyReduction_66 _
 	 =  HappyAbsSyn29
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.LTH (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)))
+		 (Abs.LTH
 	)
-happyReduction_66 _  = notHappyAtAll 
 
 happyReduce_67 = happySpecReduce_1  29 happyReduction_67
-happyReduction_67 (HappyTerminal happy_var_1)
+happyReduction_67 _
 	 =  HappyAbsSyn29
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.LE (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)))
+		 (Abs.LE
 	)
-happyReduction_67 _  = notHappyAtAll 
 
 happyReduce_68 = happySpecReduce_1  29 happyReduction_68
-happyReduction_68 (HappyTerminal happy_var_1)
+happyReduction_68 _
 	 =  HappyAbsSyn29
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.GTH (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)))
+		 (Abs.GTH
 	)
-happyReduction_68 _  = notHappyAtAll 
 
 happyReduce_69 = happySpecReduce_1  29 happyReduction_69
-happyReduction_69 (HappyTerminal happy_var_1)
+happyReduction_69 _
 	 =  HappyAbsSyn29
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.GE (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)))
+		 (Abs.GE
 	)
-happyReduction_69 _  = notHappyAtAll 
 
 happyReduce_70 = happySpecReduce_1  29 happyReduction_70
-happyReduction_70 (HappyTerminal happy_var_1)
+happyReduction_70 _
 	 =  HappyAbsSyn29
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.EQU (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)))
+		 (Abs.EQU
 	)
-happyReduction_70 _  = notHappyAtAll 
 
 happyReduce_71 = happySpecReduce_1  29 happyReduction_71
-happyReduction_71 (HappyTerminal happy_var_1)
+happyReduction_71 _
 	 =  HappyAbsSyn29
-		 ((uncurry Abs.BNFC'Position (tokenLineCol happy_var_1), Abs.NE (uncurry Abs.BNFC'Position (tokenLineCol happy_var_1)))
+		 (Abs.NE
 	)
-happyReduction_71 _  = notHappyAtAll 
 
 happyNewToken action sts stk [] =
 	action 66 66 notHappyAtAll (HappyState action) sts stk []
@@ -1574,9 +1555,9 @@ happyNewToken action sts stk (tk:tks) =
 	PT _ (TS _ 31) -> cont 60;
 	PT _ (TS _ 32) -> cont 61;
 	PT _ (TS _ 33) -> cont 62;
-	PT _ (TV _) -> cont 63;
-	PT _ (TI _) -> cont 64;
-	PT _ (TL _) -> cont 65;
+	PT _ (TV happy_dollar_dollar) -> cont 63;
+	PT _ (TI happy_dollar_dollar) -> cont 64;
+	PT _ (TL happy_dollar_dollar) -> cont 65;
 	_ -> happyError' ((tk:tks), [])
 	}
 
@@ -1592,7 +1573,7 @@ happyReturn1 :: () => a -> b -> Err a
 happyReturn1 = \a tks -> (return) a
 happyError' :: () => ([(Token)], [Prelude.String]) -> Err a
 happyError' = (\(tokens, _) -> happyError tokens)
-pProgram_internal tks = happySomeParser where
+pProgram tks = happySomeParser where
  happySomeParser = happyThen (happyParse action_0 tks) (\x -> case x of {HappyAbsSyn7 z -> happyReturn z; _other -> notHappyAtAll })
 
 happySeq = happyDontSeq
@@ -1610,11 +1591,6 @@ happyError ts = Left $
 
 myLexer :: String -> [Token]
 myLexer = tokens
-
--- Entrypoints
-
-pProgram :: [Token] -> Err Abs.Program
-pProgram = fmap snd . pProgram_internal
 {-# LINE 1 "templates/GenericTemplate.hs" #-}
 -- $Id: GenericTemplate.hs,v 1.26 2005/01/14 14:47:22 simonmar Exp $
 
