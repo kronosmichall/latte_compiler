@@ -71,12 +71,12 @@ eval ELitTrue = return Bool
 eval ELitFalse = return Bool
 eval (EApp ident exprs) = getFunType ident exprs
 eval (EString _) = return Str
-eval (Neg e) = do
+eval (Not e) = do
     typ <- eval e
     if typ /= Bool
         then error $ "Type mismatch: expected Bool, but got " ++ show typ
         else return Bool
-eval (Not e) = do
+eval (Neg e) = do
     typ <- eval e
     if typ /= Int
         then error $ "Type mismatch: expected Int, but got " ++ show typ
@@ -211,7 +211,7 @@ exec (SExp expr : xs) = do
     exec xs
 
 isBoolCond :: Expr -> MyMonad (Maybe Bool)
-isBoolCond (Neg e) = do
+isBoolCond (Not e) = do
     x <- isBoolCond e
     case x of 
         Just x' -> return $ Just $ not x'

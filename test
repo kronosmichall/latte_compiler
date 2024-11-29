@@ -30,13 +30,19 @@ if ARGV.size == 1
 end
 
 blue "Testing bad files"
+
+bad = [0,0]
+good = [0,0]
+
 Dir.glob("lattests/bad/*.lat").sort.each do |f|
   out = `#{path} #{f}`
   blue out
   if out.include?("OK")
     red "#{f} FAILED" 
+    bad[1] += 1
   else
     green "#{f} PASSED"
+    bad[0] += 1
   end
 end
 
@@ -47,7 +53,12 @@ Dir.glob("lattests/good/*.lat").sort.each do |f|
   blue out
   if out.include?("OK")
     green "#{f} PASSED"
+    good[0] += 1
   else
     red "#{f} FAILED" 
+    good[1] += 1
   end
 end
+
+blue "BAD TESTS #{bad[0]}/#{bad[0] + bad[1]}"
+blue "GOOD TESTS #{good[0]}/#{good[0] + good[1]}"
