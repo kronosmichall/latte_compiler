@@ -3,3 +3,5 @@ latte-cabal
 dist-newstyle/
 lattests/
 .vscode/
+build/
+latc

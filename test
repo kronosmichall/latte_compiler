@@ -1,7 +1,9 @@
 #!/usr/bin/env ruby
 
-`cabal build`
-path = "dist-newstyle/build/x86_64-linux/ghc-9.4.8/latte-0.1.0.0/x/checker/build/checker/checker"
+# `cabal build`
+# path = "dist-newstyle/build/x86_64-linux/ghc-9.4.8/latte-0.1.0.0/x/checker/build/checker/checker"
+`make`
+path = "./latc"
 
 def red(str)
   puts "\e[31m#{str}\e[0m"
