@@ -15,7 +15,7 @@ getProgram programStr =
     let res = pProgram (myLexer programStr) in
     case res of
         Ok program -> program
-        Bad s -> error s
+        Bad s -> error ("ERROR\n" ++ s)
 
 assertArgs :: [String] -> IO ()
 assertArgs args = do

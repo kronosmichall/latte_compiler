@@ -29,6 +29,9 @@ err :: (Show a1, Show a2) => [Char] -> Maybe (a1, a2) -> a3
 err msg (Just (l, c)) = error $ "ERROR\n    Error at line " ++ show l ++ ", column " ++ show c ++ ": " ++ msg
 err msg Nothing = error $ "ERROR\n  Error: " ++ msg
 
+errTop :: [Char] -> a
+errTop msg = error ("ERROR\n" ++ msg)
+
 typeToMy :: Type -> MyType
 typeToMy (Int _) = MyInt
 typeToMy (Str _) = MyStr
@@ -279,7 +282,7 @@ initTopDefs (FnDef _ typ (Ident name) args (Block _ _) : xs) = do
     initTopDefs xs
 
 hasMain :: [TopDef] -> MyMonad ()
-hasMain [] = error "No main function found"
+hasMain [] = errTop "No main function found"
 hasMain (FnDef line typ (Ident name) args (Block _ _) : xs) = do
     let funType = MyFun (typeToMy typ) (map (\(Arg _ typ' _) -> typeToMy typ') args)
     if name == "main"
