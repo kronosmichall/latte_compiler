@@ -6,7 +6,6 @@ import qualified Data.Map as Map hiding (map)
 import Control.Monad.State
 import Debug.Trace (trace)
 
-
 data Instr =
     PrintInt Loc |
     PrintString Loc |
@@ -135,11 +134,7 @@ getFunType (Ident name) exprs = do
         _ -> error $ "Not a function: " ++ name
 
 exec :: [Stmt] -> MyMonad ()
-exec [] = do
-    (_, ret, hret) <- get
-    if not hret && ret /= Void
-        then error "Missing return statement"
-        else return ()
+exec [] = return ()
 exec (Empty : xs) = exec xs
 exec (BStmt (Block stmts) : xs) = do
     (vars, ret, hret) <- get
@@ -181,19 +176,33 @@ exec (Cond expr stmt : xs) = do
         else exec [stmt]
     (_, _, hret2) <- get
     isBool <- isBoolCond expr
-    if hret2 && not hret && isBool
+    trace (show isBool ++ " " ++ show hret2) $ return ()
+    if hret2 && not hret && isBool == Just True
         then put (vars, ret, hret2)
         else put (vars, ret, hret)
     exec xs
 
-exec (CondElse _ stmt1 stmt2 : xs) = do
+exec (CondElse expr stmt1 stmt2 : xs) = do
+    isBool <- isBoolCond expr
     (vars, ret, hret) <- get
-    -- is true expr?
-    exec [stmt1]
-    (_, _, hret1) <- get
-    exec [stmt2]
-    (_, _, hret2) <- get
-    put (vars, ret, hret || (hret1 && hret2))
+
+    if isBool == Just True 
+        then do 
+            exec [stmt1]
+            (_, _, hret1) <- get
+            put (vars, ret, hret || hret1)
+        else if isBool == Just False 
+            then do
+                exec [stmt2]
+                (_, _, hret2) <- get
+                put (vars, ret, hret || hret2)
+        else do
+            exec [stmt1]
+            (_, _, hret1) <- get
+            exec [stmt2]
+            (_, _, hret2) <- get
+            put (vars, ret, hret || (hret1 && hret2))
+        
     exec xs
 
 exec (While expr stmt : xs) = exec (Cond expr stmt : xs)
@@ -201,21 +210,34 @@ exec (SExp expr : xs) = do
     typ <- eval expr
     exec xs
 
-isBoolCond :: Expr -> MyMonad Bool
+isBoolCond :: Expr -> MyMonad (Maybe Bool)
 isBoolCond (Neg e) = do
     x <- isBoolCond e
-    return $ not x
+    case x of 
+        Just x' -> return $ Just $ not x'
+        Nothing -> return Nothing
+
 isBoolCond (EAnd e1 e2) = do
     x <- isBoolCond e1
     y <- isBoolCond e2
-    return $ x && y
+    case x of 
+        Nothing -> return Nothing
+        Just x' -> case y of
+            Nothing -> return Nothing
+            Just y' -> return $ Just $ x' && y'
+
 isBoolCond (EOr e1 e2) = do
     x <- isBoolCond e1
     y <- isBoolCond e2
-    return $ x || y
-isBoolCond ELitTrue = return True
-isBoolCond ELitFalse = return False
-isBoolCond _ = return False
+    case x of 
+        Nothing -> return Nothing
+        Just x' -> case y of
+            Nothing -> return Nothing
+            Just y' -> return $ Just $ x' || y'
+
+isBoolCond ELitTrue = return $ Just True
+isBoolCond ELitFalse = return $ Just False
+isBoolCond _ = return Nothing
 
 initTopDefs :: [TopDef] -> MyMonad ()
 initTopDefs [] = return ()
@@ -243,16 +265,24 @@ execProgram (Program topdefs) = do
     initPrints
     initTopDefs topdefs
     hasMain topdefs
-    forM_ topdefs execTopDef
+    forM_ topdefs execTopDefError
 
-execTopDef :: TopDef -> MyMonad ()
+execTopDefError :: TopDef -> MyMonad ()
+execTopDefError (FnDef typ (Ident name) args (Block stmts)) = do
+    res <- execTopDef (FnDef typ (Ident name) args (Block stmts))
+    unless res $ error $ "Function " ++ name ++ " is missing a return"
+
+execTopDef :: TopDef -> MyMonad Bool
 execTopDef (FnDef typ (Ident _) args (Block stmts)) = do
-    (vars, typ2, hret) <- get
+    (vars, _, _) <- get
     put (vars, typ, False)
     forM_ args $ \(Arg typ' (Ident name)) -> newVarOverShadow typ' name
     exec stmts
-    (varst, typt, hrett) <- get
+    (_, retAfter, hretAfter) <- get
+    let ret = retAfter == Void || hretAfter
     put (vars, Void, False)
+    return ret
+
 
 
 initPrints :: MyMonad()

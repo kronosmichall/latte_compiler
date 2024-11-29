@@ -20,7 +20,7 @@ if ARGV.size == 1
   blue "testing #{test}"
   out = `#{path} #{test}`
   blue out
-  if out.include?("OK")
+  if (out.include?("OK") && test.include?("bad")) || (!out.include?("OK") && test.include?("good"))
     red "#{test} FAILED" 
   else
     green "#{test} PASSED"
@@ -44,6 +44,7 @@ blue "Testing good files"
 Dir.glob("lattests/good/*.lat").sort.each do |f|
   blue "Testing #{f}"
   out = `#{path} #{f}`
+  blue out
   if out.include?("OK")
     green "#{f} PASSED"
   else
