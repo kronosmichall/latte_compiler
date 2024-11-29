@@ -139,7 +139,8 @@ exec (Empty : xs) = exec xs
 exec (BStmt (Block stmts) : xs) = do
     (vars, ret, hret) <- get
     exec stmts
-    put (vars, ret, hret)
+    (_, _, hret2) <- get
+    put (vars, ret, hret2)
     exec xs
 exec (Decl typ items : xs) = do
     mapM_ (declareItem typ) items
@@ -201,8 +202,8 @@ exec (CondElse expr stmt1 stmt2 : xs) = do
             (_, _, hret1) <- get
             exec [stmt2]
             (_, _, hret2) <- get
-            trace (show hret1 ++ " " ++ show hret2) $ return ()
             put (vars, ret, hret || (hret1 && hret2))
+            -- trace (show hret1 ++ " " ++ show hret2) $ return ()
         
     exec xs
 
