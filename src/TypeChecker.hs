@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use tuple-section" #-}
 module TypeChecker where
 
 import Abs
@@ -148,25 +150,29 @@ isDecl :: Stmt -> Bool
 isDecl (Decl _ _ _) = True
 isDecl _ = False
 
-getItems :: Stmt -> [Item]
-getItems (Decl _ _ items) = items
+getItems :: Stmt -> [(BNFC'Position, Item)]
+getItems (Decl line _ items) = map (\item -> (line, item)) items
 getItems _ = []
 
 itemName :: Item -> Varname
 itemName (NoInit _ (Ident name)) = name
 itemName (Init _ (Ident name) _) = name
 
-hasDuplicates :: [Varname] -> Bool
-hasDuplicates xs = length xs /= Set.size (Set.fromList xs)
+hasDuplicates ::  [(BNFC'Position, Item)] -> Maybe BNFC'Position
+hasDuplicates items = go items Set.empty
+    where
+        go [] _ = Nothing
+        go ((line, item):xs) s = if Set.member (itemName item) s
+            then Just line
+            else go xs (Set.insert (itemName item) s)
 
 findMultiDecl :: BNFC'Position -> [Stmt] -> MyMonad ()
 findMultiDecl line stmts = do
     let decls = Prelude.filter isDecl stmts
     let items = concatMap getItems decls
-    let names = map itemName items
-    if hasDuplicates names
-        then err "Multiple declarations of the same variable" line
-        else return ()
+    case hasDuplicates items of
+        Just line' -> err "Multiple declarations of the same variable" line'
+        Nothing -> return()
 
 exec :: [Stmt] ->  MyMonad ()
 exec [] = return ()
