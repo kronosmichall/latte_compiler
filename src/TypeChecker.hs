@@ -16,7 +16,14 @@ type RetType = MyType
 type HasReturn = Bool
 
 data MyType = MyInt | MyStr | MyBool | MyVoid | MyFun MyType [MyType]
-    deriving (Eq, Show)
+    deriving (Eq)
+
+instance Show MyType where
+    show MyInt = "Int"
+    show MyStr = "Str"
+    show MyBool = "Bool"
+    show MyVoid = "Void"
+    show (MyFun ret args) = "Fun " ++ show ret ++ " " ++ show args
 
 err :: (Show a1, Show a2) => [Char] -> Maybe (a1, a2) -> a3
 err msg (Just (l, c)) = error $ "ERROR\n    Error at line " ++ show l ++ ", column " ++ show c ++ ": " ++ msg
@@ -58,19 +65,19 @@ declareItem typ (Init line (Ident name) expr) = do
         then err ("Type mismatch: expected " ++ show typ ++ ", but got " ++ show exprTyp) line
         else newVarInit typ name
 
-varType :: Varname -> MyMonad MyType
-varType name = do
+varType :: BNFC'Position -> Varname -> MyMonad MyType
+varType line name = do
     (vars, _, _) <- get
     case Map.lookup name vars of
         Just (typ, _) -> return typ
-        Nothing -> error $ "Variable " ++ name ++ " not declared"
+        Nothing -> err ("Variable " ++ name ++ " not declared") line
 
 eval :: Expr -> MyMonad MyType
-eval (EVar line (Ident name)) = varType name
+eval (EVar line (Ident name)) = varType line name
 eval (ELitInt _ _) = return MyInt
 eval (ELitTrue _) = return MyBool
 eval (ELitFalse _) = return MyBool
-eval (EApp line ident exprs) = getFunType ident exprs
+eval (EApp line ident exprs) = getFunType line ident exprs
 eval (EString _ _) = return MyStr
 eval (Not line e) = do
     typ <- eval e
@@ -119,19 +126,19 @@ eval (EAnd line e1 e2) = do
 
 eval (EOr line e1 e2) = eval (EAnd line e1 e2)
 
-getFunType :: Ident -> [Expr] -> MyMonad MyType
-getFunType (Ident name) exprs = do
-    typ <- varType name
+getFunType :: BNFC'Position -> Ident -> [Expr] -> MyMonad MyType
+getFunType line (Ident name) exprs = do
+    typ <- varType line name
     case typ of
         MyFun typ' args -> do
             if length args /= length exprs
-                then error ("Wrong number of arguments: expected " ++ show (length args) ++ ", but got " ++ show (length exprs))
+                then err ("Wrong number of arguments: expected " ++ show (length args) ++ ", but got " ++ show (length exprs)) line
                 else do
                     types <- mapM eval exprs
                     if types /= args
-                        then error ("Type mismatch in arguments: expected " ++ show args ++ ", but got " ++ show types) 
+                        then err ("Type mismatch in arguments: expected " ++ show args ++ ", but got " ++ show types) line
                         else return typ'
-        _ -> error ("Not a function: " ++ name) 
+        _ -> err ("Not a function: " ++ name) line 
 
 
 isDecl :: Stmt -> Bool
@@ -149,13 +156,13 @@ itemName (Init _ (Ident name) _) = name
 hasDuplicates :: [Varname] -> Bool
 hasDuplicates xs = length xs /= Set.size (Set.fromList xs)
 
-findMultiDecl :: [Stmt] -> MyMonad ()
-findMultiDecl stmts = do
+findMultiDecl :: BNFC'Position -> [Stmt] -> MyMonad ()
+findMultiDecl line stmts = do
     let decls = Prelude.filter isDecl stmts
     let items = concatMap getItems decls
     let names = map itemName items
     if hasDuplicates names
-        then error "Multiple declarations of the same variable"
+        then err "Multiple declarations of the same variable" line
         else return ()
 
 exec :: [Stmt] ->  MyMonad ()
@@ -171,13 +178,13 @@ exec (Decl _ typ items : xs) = do
     mapM_ (declareItem (typeToMy typ)) items
     exec xs
 exec (Ass line (Ident name) expr : xs) = do
-    typ1 <- varType name
+    typ1 <- varType line name
     typ2 <- eval expr
     if typ1 /= typ2
         then err ("Type mismatch in assignment: expected " ++ show typ1 ++ ", but got " ++ show typ2) line
         else exec xs
 exec (Incr line (Ident name) : xs) = do
-    typ <- varType name
+    typ <- varType line name
     if typ /= MyInt
         then err ("Type mismatch: expected Int for increment, but got " ++ show typ) line
         else exec xs
@@ -278,7 +285,7 @@ hasMain (FnDef line typ (Ident name) args (Block _ _) : xs) = do
     if name == "main"
         then
             if funType /= MyFun MyInt []
-                then error "Main function must have type Int"
+                then err "Main function must have type Int" line
                 else
                     if args /= []
                         then err "Main function must have no arguments" line
@@ -295,14 +302,14 @@ execProgram (Program _ topdefs) = do
 execTopDefError :: TopDef -> MyMonad ()
 execTopDefError (FnDef line typ (Ident name) args (Block bline stmts)) = do
     res <- execTopDef (FnDef line typ (Ident name) args (Block bline stmts))
-    unless res $ error $ "Function " ++ name ++ " is missing a return"
+    unless res $ err ("Function " ++ name ++ " is missing a return") line
 
 execTopDef :: TopDef -> MyMonad Bool
-execTopDef (FnDef _ typ (Ident _) args (Block _ stmts)) = do
+execTopDef (FnDef line typ (Ident _) args (Block _ stmts)) = do
     (vars, _, _) <- get
     put (vars, typeToMy typ, False)
     forM_ args $ \(Arg _ typ' (Ident name)) -> newVarOverShadow (typeToMy typ') name
-    findMultiDecl stmts
+    findMultiDecl line stmts
     exec stmts
     (_, retAfter, hretAfter) <- get
     let ret = retAfter == MyVoid || hretAfter
