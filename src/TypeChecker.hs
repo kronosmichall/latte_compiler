@@ -4,6 +4,7 @@ import Abs
 import Data.Map hiding (map)
 import qualified Data.Map as Map hiding (map)
 import Control.Monad.State
+import Debug.Trace (trace)
 
 
 data Instr =
@@ -37,6 +38,11 @@ newVar typ name val = do
         else do
             (vars, ret, hret) <- get
             put (Map.insert name (typ, val) vars, ret, hret)
+
+newVarOverShadow :: Type -> Varname -> MyMonad ()
+newVarOverShadow typ name = do
+    (vars, ret, hret) <- get
+    put (Map.insert name (typ, True) vars, ret, hret)
 
 newVarNoInit :: Type -> Varname -> MyMonad ()
 newVarNoInit typ name = newVar typ name False
@@ -88,12 +94,12 @@ eval (EAdd e1 _ e2) = do
     typ2 <- eval e2
     if (typ1 /= Int && typ1 /= Str) || typ1 /= typ2
         then error $ "Type mismatch: expected " ++ show typ1 ++ ", but got " ++ show typ2
-        else return Int
+        else return typ1
 
 eval (ERel e1 op e2) = do
     typ1 <- eval e1
     typ2 <- eval e2
-    case op of 
+    case op of
         EQU -> if typ1 /= typ2
             then error $ "Type mismatch: expected " ++ show typ1 ++ ", but got " ++ show typ2
             else return Bool
@@ -115,6 +121,7 @@ eval (EOr e1 e2) = eval (EAnd e1 e2)
 
 getFunType :: Ident -> [Expr] -> MyMonad Type
 getFunType (Ident name) exprs = do
+    trace "get fun typ" $ return ()
     typ <- varType name
     case typ of
         Fun typ' args -> do
@@ -122,13 +129,17 @@ getFunType (Ident name) exprs = do
                 then error $ "Wrong number of arguments: expected " ++ show (length args) ++ ", but got " ++ show (length exprs)
                 else do
                     types <- mapM eval exprs
-                    if types /= args
+                    if trace (show typ' ++ ": " ++ show args ++ " got <- " ++ show types) types /= args
                         then error $ "Type mismatch in arguments: expected " ++ show args ++ ", but got " ++ show types
                         else return typ'
         _ -> error $ "Not a function: " ++ name
 
 exec :: [Stmt] -> MyMonad ()
-exec [] = return ()
+exec [] = do
+    (_, ret, hret) <- get
+    if not hret && ret /= Void
+        then error "Missing return statement"
+        else return ()
 exec (Empty : xs) = exec xs
 exec (BStmt (Block stmts) : xs) = do
     (vars, ret, hret) <- get
@@ -149,7 +160,7 @@ exec (Incr (Ident name) : xs) = do
     if typ /= Int
         then error $ "Type mismatch: expected Int for increment, but got " ++ show typ
         else exec xs
-exec (Decr ident : xs) = exec(Incr ident : xs)
+exec (Decr ident : xs) = exec (Incr ident : xs)
 exec (Ret expr : xs) = do
     (vars, ret, _) <- get
     typ <- eval expr
@@ -160,18 +171,20 @@ exec (Ret expr : xs) = do
 exec (VRet : xs) = do
     (_, ret, _) <- get
     if ret /= Void
-        then error $ "Type mismatch: expected Void return type, but got " ++ show ret
+        then error $ "Type mismatch: expected " ++ show ret  ++ " return type, but got void"
         else exec xs
 exec (Cond expr stmt : xs) = do
     typ <- eval expr
     (vars, ret, hret) <- get
-    -- is true expr?
     if typ /= Bool
         then error $ "Type mismatch in condition: expected Bool, but got " ++ show typ
         else exec [stmt]
-    put(vars, ret, hret)
+    (_, _, hret2) <- get
+    isBool <- isBoolCond expr
+    if hret2 && not hret && isBool
+        then put (vars, ret, hret2)
+        else put (vars, ret, hret)
     exec xs
-
 
 exec (CondElse _ stmt1 stmt2 : xs) = do
     (vars, ret, hret) <- get
@@ -184,12 +197,30 @@ exec (CondElse _ stmt1 stmt2 : xs) = do
     exec xs
 
 exec (While expr stmt : xs) = exec (Cond expr stmt : xs)
-exec (SExp _ : xs) = exec xs
+exec (SExp expr : xs) = do
+    typ <- eval expr
+    exec xs
+
+isBoolCond :: Expr -> MyMonad Bool
+isBoolCond (Neg e) = do
+    x <- isBoolCond e
+    return $ not x
+isBoolCond (EAnd e1 e2) = do
+    x <- isBoolCond e1
+    y <- isBoolCond e2
+    return $ x && y
+isBoolCond (EOr e1 e2) = do
+    x <- isBoolCond e1
+    y <- isBoolCond e2
+    return $ x || y
+isBoolCond ELitTrue = return True
+isBoolCond ELitFalse = return False
+isBoolCond _ = return False
 
 initTopDefs :: [TopDef] -> MyMonad ()
 initTopDefs [] = return ()
 initTopDefs (FnDef typ (Ident name) args (Block _) : xs) = do
-    let funType = Fun typ (map (\(Arg _ _) -> typ) args)
+    let funType = Fun typ (map (\(Arg typ' _) -> typ') args)
     newVarInit funType name
     initTopDefs xs
 
@@ -209,16 +240,26 @@ hasMain (FnDef typ (Ident name) args (Block _) : xs) = do
 
 execProgram :: Program -> MyMonad ()
 execProgram (Program topdefs) = do
+    initPrints
     initTopDefs topdefs
     hasMain topdefs
     forM_ topdefs execTopDef
 
 execTopDef :: TopDef -> MyMonad ()
-execTopDef (FnDef typ (Ident _) _ (Block stmts)) = do
-    (vars, _, hret) <- get
-    put (vars, typ, hret)
+execTopDef (FnDef typ (Ident _) args (Block stmts)) = do
+    (vars, typ2, hret) <- get
+    put (vars, typ, False)
+    forM_ args $ \(Arg typ' (Ident name)) -> newVarOverShadow typ' name
     exec stmts
-    
+    (varst, typt, hrett) <- get
+    put (vars, Void, False)
+
+
+initPrints :: MyMonad()
+initPrints = do
+    newVarInit (Fun Void [Int]) "printInt"
+    newVarInit (Fun Void [Str]) "printString"
+    newVarInit (Fun Void [Bool]) "printBool"
 
 newState :: (Map Varname Var, RetType, HasReturn)
 newState  = (Map.empty, Void, False)
@@ -227,4 +268,5 @@ comp :: Program -> IO ()
 comp prog = do
     let func = runState (execProgram prog)
     let ((), (_, _, res)) = func newState
-    putStrLn $ if res then "OK" else show res
+    res `seq` return ()
+    putStrLn "OK"
