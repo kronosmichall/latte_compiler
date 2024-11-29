@@ -5,6 +5,7 @@ import Data.Map hiding (map)
 import qualified Data.Map as Map hiding (map)
 import Control.Monad.State
 import Debug.Trace (trace)
+import qualified Data.Set as Set
 
 data Instr =
     PrintInt Loc |
@@ -31,12 +32,14 @@ defined name = do
 
 newVar :: Type -> Varname -> Initialized -> MyMonad ()
 newVar typ name val = do
-    def <- defined name
-    if def
-        then error $ "Variable " ++ name ++ " already declared"
-        else do
-            (vars, ret, hret) <- get
-            put (Map.insert name (typ, val) vars, ret, hret)
+    (vars, ret, hret) <- get
+    put (Map.insert name (typ, val) vars, ret, hret)
+    -- def <- defined name
+    -- if def
+    --     then error $ "Variable " ++ name ++ " already declared"
+    --     else do
+    --         (vars, ret, hret) <- get
+    --         put (Map.insert name (typ, val) vars, ret, hret)
 
 newVarOverShadow :: Type -> Varname -> MyMonad ()
 newVarOverShadow typ name = do
@@ -133,11 +136,38 @@ getFunType (Ident name) exprs = do
                         else return typ'
         _ -> error $ "Not a function: " ++ name
 
-exec :: [Stmt] -> MyMonad ()
+
+isDecl :: Stmt -> Bool
+isDecl (Decl _ _) = True
+isDecl _ = False
+
+getItems :: Stmt -> [Item]
+getItems (Decl _ items) = items
+getItems _ = []
+
+itemName :: Item -> Varname
+itemName (NoInit (Ident name)) = name
+itemName (Init (Ident name) _) = name
+
+hasDuplicates :: [Varname] -> Bool
+hasDuplicates xs = length xs /= Set.size (Set.fromList xs)
+
+findMultiDecl :: [Stmt] -> MyMonad ()
+findMultiDecl stmts = do
+    let decls = Prelude.filter isDecl stmts
+    trace (show decls) $ return ()
+    trace (show stmts) $ return ()
+    let items = concatMap getItems decls
+    let names = map itemName items
+    if hasDuplicates names
+        then error "Multiple declarations of the same variable"
+        else return ()
+
+exec :: [Stmt] ->  MyMonad ()
 exec [] = return ()
 exec (Empty : xs) = exec xs
 exec (BStmt (Block stmts) : xs) = do
-    (vars, ret, hret) <- get
+    (vars, ret, _) <- get
     exec stmts
     (_, _, hret2) <- get
     put (vars, ret, hret2)
@@ -187,12 +217,12 @@ exec (CondElse expr stmt1 stmt2 : xs) = do
     isBool <- isBoolCond expr
     (vars, ret, hret) <- get
 
-    if isBool == Just True 
-        then do 
+    if isBool == Just True
+        then do
             exec [stmt1]
             (_, _, hret1) <- get
             put (vars, ret, hret || hret1)
-        else if isBool == Just False 
+        else if isBool == Just False
             then do
                 exec [stmt2]
                 (_, _, hret2) <- get
@@ -204,7 +234,7 @@ exec (CondElse expr stmt1 stmt2 : xs) = do
             (_, _, hret2) <- get
             put (vars, ret, hret || (hret1 && hret2))
             -- trace (show hret1 ++ " " ++ show hret2) $ return ()
-        
+
     exec xs
 
 exec (While expr stmt : xs) = exec (Cond expr stmt : xs)
@@ -215,14 +245,14 @@ exec (SExp expr : xs) = do
 isBoolCond :: Expr -> MyMonad (Maybe Bool)
 isBoolCond (Not e) = do
     x <- isBoolCond e
-    case x of 
+    case x of
         Just x' -> return $ Just $ not x'
         Nothing -> return Nothing
 
 isBoolCond (EAnd e1 e2) = do
     x <- isBoolCond e1
     y <- isBoolCond e2
-    case x of 
+    case x of
         Nothing -> return Nothing
         Just x' -> case y of
             Nothing -> return Nothing
@@ -231,7 +261,7 @@ isBoolCond (EAnd e1 e2) = do
 isBoolCond (EOr e1 e2) = do
     x <- isBoolCond e1
     y <- isBoolCond e2
-    case x of 
+    case x of
         Nothing -> return Nothing
         Just x' -> case y of
             Nothing -> return Nothing
@@ -279,6 +309,7 @@ execTopDef (FnDef typ (Ident _) args (Block stmts)) = do
     (vars, _, _) <- get
     put (vars, typ, False)
     forM_ args $ \(Arg typ' (Ident name)) -> newVarOverShadow typ' name
+    findMultiDecl stmts
     exec stmts
     (_, retAfter, hretAfter) <- get
     let ret = retAfter == Void || hretAfter
@@ -292,6 +323,10 @@ initPrints = do
     newVarInit (Fun Void [Int]) "printInt"
     newVarInit (Fun Void [Str]) "printString"
     newVarInit (Fun Void [Bool]) "printBool"
+    newVarInit (Fun Int []) "readInt"
+    newVarInit (Fun Str []) "readString"
+    newVarInit (Fun Bool []) "readBool"
+
 
 newState :: (Map Varname Var, RetType, HasReturn)
 newState  = (Map.empty, Void, False)
