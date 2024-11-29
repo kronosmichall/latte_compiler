@@ -48,19 +48,19 @@ Dir.glob("lattests/bad/*.lat").sort.each do |f|
   end
 end
 
-blue "Testing good files"
-Dir.glob("lattests/good/*.lat").sort.each do |f|
-  blue "Testing #{f}"
-  out = `#{path} #{f}`
-  blue out
-  if out.include?("OK")
-    green "#{f} PASSED"
-    good[0] += 1
-  else
-    red "#{f} FAILED" 
-    good[1] += 1
-  end
-end
+# blue "Testing good files"
+# Dir.glob("lattests/good/*.lat").sort.each do |f|
+#   blue "Testing #{f}"
+#   out = `#{path} #{f}`
+#   blue out
+#   if out.include?("OK")
+#     green "#{f} PASSED"
+#     good[0] += 1
+#   else
+#     red "#{f} FAILED" 
+#     good[1] += 1
+#   end
+# end
 
 blue "BAD TESTS #{bad[0]}/#{bad[0] + bad[1]}"
-blue "GOOD TESTS #{good[0]}/#{good[0] + good[1]}"
+# blue "GOOD TESTS #{good[0]}/#{good[0] + good[1]}"

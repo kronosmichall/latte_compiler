@@ -4,7 +4,6 @@ import Abs
 import Data.Map hiding (map)
 import qualified Data.Map as Map hiding (map)
 import Control.Monad.State
-import Debug.Trace (trace)
 import qualified Data.Set as Set
 
 type Loc = Int
@@ -18,6 +17,10 @@ type HasReturn = Bool
 
 data MyType = MyInt | MyStr | MyBool | MyVoid | MyFun MyType [MyType]
     deriving (Eq, Show)
+
+err :: (Show a1, Show a2) => [Char] -> Maybe (a1, a2) -> a3
+err msg (Just (l, c)) = error $ "ERROR\n    Error at line " ++ show l ++ ", column " ++ show c ++ ": " ++ msg
+err msg Nothing = error $ "ERROR\n  Error: " ++ msg
 
 typeToMy :: Type -> MyType
 typeToMy (Int _) = MyInt
@@ -52,7 +55,7 @@ declareItem typ (NoInit line (Ident name)) = newVarNoInit typ name
 declareItem typ (Init line (Ident name) expr) = do
     exprTyp <- eval expr
     if typ /= exprTyp
-        then error $ "Type mismatch: expected " ++ show typ ++ ", but got " ++ show exprTyp
+        then err ("Type mismatch: expected " ++ show typ ++ ", but got " ++ show exprTyp) line
         else newVarInit typ name
 
 varType :: Varname -> MyMonad MyType
@@ -67,30 +70,30 @@ eval (EVar line (Ident name)) = varType name
 eval (ELitInt _ _) = return MyInt
 eval (ELitTrue _) = return MyBool
 eval (ELitFalse _) = return MyBool
-eval (EApp _ ident exprs) = getFunType ident exprs
+eval (EApp line ident exprs) = getFunType ident exprs
 eval (EString _ _) = return MyStr
 eval (Not line e) = do
     typ <- eval e
     if typ /= MyBool
-        then error $ "Type mismatch: expected Bool, but got " ++ show typ
+        then err ("Type mismatch: expected Bool, but got " ++ show typ) line
         else return MyBool
 eval (Neg line e) = do
     typ <- eval e
     if typ /= MyInt
-        then error $ "Type mismatch: expected Int, but got " ++ show typ
+        then err ("Type mismatch: expected Int, but got " ++ show typ) line
         else return MyInt
 eval (EMul line e1 _ e2) = do
     typ1 <- eval e1
     typ2 <- eval e2
     if typ1 /= MyInt || typ2 /= MyInt
-        then error $ "Type mismatch: expected Int, but got " ++ show typ1 ++ " and " ++ show typ2
+        then err ("Type mismatch: expected Int, but got " ++ show typ1 ++ " and " ++ show typ2) line
         else return MyInt
 
 eval (EAdd line e1 _ e2) = do
     typ1 <- eval e1
     typ2 <- eval e2
     if (typ1 /= MyInt && typ1 /= MyStr) || typ1 /= typ2
-        then error $ "Type mismatch: expected " ++ show typ1 ++ ", but got " ++ show typ2
+        then err ("Type mismatch: expected " ++ show typ1 ++ ", but got " ++ show typ2) line
         else return typ1
 
 eval (ERel line e1 op e2) = do
@@ -98,38 +101,37 @@ eval (ERel line e1 op e2) = do
     typ2 <- eval e2
     case op of
         EQU _ -> if typ1 /= typ2
-            then error $ "Type mismatch: expected " ++ show typ1 ++ ", but got " ++ show typ2
+            then err ("Type mismatch: expected " ++ show typ1 ++ ", but got " ++ show typ2) line
             else return MyBool
         NE _-> if typ1 /= typ2
-            then error $ "Type mismatch: expected " ++ show typ1 ++ ", but got " ++ show typ2
+            then err ("Type mismatch: expected " ++ show typ1 ++ ", but got " ++ show typ2) line
             else return MyBool
         _ -> if typ1 /= MyInt || typ2 /= MyInt
-            then error $ "Type mismatch: expected Int, but got " ++ show typ1 ++ " and " ++ show typ2
+            then err ("Type mismatch: expected Int, but got " ++ show typ1 ++ " and " ++ show typ2) line
             else return MyBool
 
 eval (EAnd line e1 e2) = do
     typ1 <- eval e1
     typ2 <- eval e2
     if typ1 /= MyBool || typ2 /= MyBool
-        then error $ "Type mismatch: expected Bool, but got " ++ show typ1 ++ " and " ++ show typ2
+        then err ("Type mismatch: expected Bool, but got " ++ show typ1 ++ " and " ++ show typ2) line
         else return MyBool
 
 eval (EOr line e1 e2) = eval (EAnd line e1 e2)
 
 getFunType :: Ident -> [Expr] -> MyMonad MyType
 getFunType (Ident name) exprs = do
-    trace "get fun typ" $ return ()
     typ <- varType name
     case typ of
         MyFun typ' args -> do
             if length args /= length exprs
-                then error $ "Wrong number of arguments: expected " ++ show (length args) ++ ", but got " ++ show (length exprs)
+                then error ("Wrong number of arguments: expected " ++ show (length args) ++ ", but got " ++ show (length exprs))
                 else do
                     types <- mapM eval exprs
-                    if trace (show typ' ++ ": " ++ show args ++ " got <- " ++ show types) types /= args
-                        then error $ "Type mismatch in arguments: expected " ++ show args ++ ", but got " ++ show types
+                    if types /= args
+                        then error ("Type mismatch in arguments: expected " ++ show args ++ ", but got " ++ show types) 
                         else return typ'
-        _ -> error $ "Not a function: " ++ name
+        _ -> error ("Not a function: " ++ name) 
 
 
 isDecl :: Stmt -> Bool
@@ -150,8 +152,6 @@ hasDuplicates xs = length xs /= Set.size (Set.fromList xs)
 findMultiDecl :: [Stmt] -> MyMonad ()
 findMultiDecl stmts = do
     let decls = Prelude.filter isDecl stmts
-    trace (show decls) $ return ()
-    trace (show stmts) $ return ()
     let items = concatMap getItems decls
     let names = map itemName items
     if hasDuplicates names
@@ -170,39 +170,38 @@ exec (BStmt _ (Block _ stmts) : xs) = do
 exec (Decl _ typ items : xs) = do
     mapM_ (declareItem (typeToMy typ)) items
     exec xs
-exec (Ass _ (Ident name) expr : xs) = do
+exec (Ass line (Ident name) expr : xs) = do
     typ1 <- varType name
     typ2 <- eval expr
     if typ1 /= typ2
-        then error $ "Type mismatch in assignment: expected " ++ show typ1 ++ ", but got " ++ show typ2
+        then err ("Type mismatch in assignment: expected " ++ show typ1 ++ ", but got " ++ show typ2) line
         else exec xs
-exec (Incr _ (Ident name) : xs) = do
+exec (Incr line (Ident name) : xs) = do
     typ <- varType name
     if typ /= MyInt
-        then error $ "Type mismatch: expected Int for increment, but got " ++ show typ
+        then err ("Type mismatch: expected Int for increment, but got " ++ show typ) line
         else exec xs
 exec (Decr line  ident : xs) = exec (Incr line ident : xs)
-exec (Ret _ expr : xs) = do
+exec (Ret line expr : xs) = do
     (vars, ret, _) <- get
     typ <- eval expr
     put (vars, ret, True)
     if typ /= ret
-        then error $ "Type mismatch in return: expected " ++ show ret ++ ", but got " ++ show typ
+        then err ("Type mismatch in return: expected " ++ show ret ++ ", but got " ++ show typ) line
         else exec xs
-exec (VRet _ : xs) = do
+exec (VRet line : xs) = do
     (_, ret, _) <- get
     if ret /= MyVoid
-        then error $ "Type mismatch: expected " ++ show ret  ++ " return type, but got void"
+        then err ("Type mismatch: expected " ++ show ret  ++ " return type, but got void") line
         else exec xs
-exec (Cond _ expr stmt : xs) = do
+exec (Cond line expr stmt : xs) = do
     typ <- eval expr
     (vars, ret, hret) <- get
     if typ /= MyBool
-        then error $ "Type mismatch in condition: expected Bool, but got " ++ show typ
+        then err ("Type mismatch in condition: expected Bool, but got " ++ show typ) line
         else exec [stmt]
     (_, _, hret2) <- get
     isBool <- isBoolCond expr
-    trace (show isBool ++ " " ++ show hret2) $ return ()
     if hret2 && not hret && isBool == Just True
         then put (vars, ret, hret2)
         else put (vars, ret, hret)
@@ -228,7 +227,6 @@ exec (CondElse _ expr stmt1 stmt2 : xs) = do
             exec [stmt2]
             (_, _, hret2) <- get
             put (vars, ret, hret || (hret1 && hret2))
-            -- trace (show hret1 ++ " " ++ show hret2) $ return ()
 
     exec xs
 
@@ -275,7 +273,7 @@ initTopDefs (FnDef _ typ (Ident name) args (Block _ _) : xs) = do
 
 hasMain :: [TopDef] -> MyMonad ()
 hasMain [] = error "No main function found"
-hasMain (FnDef _ typ (Ident name) args (Block _ _) : xs) = do
+hasMain (FnDef line typ (Ident name) args (Block _ _) : xs) = do
     let funType = MyFun (typeToMy typ) (map (\(Arg _ typ' _) -> typeToMy typ') args)
     if name == "main"
         then
@@ -283,7 +281,7 @@ hasMain (FnDef _ typ (Ident name) args (Block _ _) : xs) = do
                 then error "Main function must have type Int"
                 else
                     if args /= []
-                        then error "Main function must have no arguments"
+                        then err "Main function must have no arguments" line
                         else return ()
         else hasMain xs
 
