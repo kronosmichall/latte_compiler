@@ -3,11 +3,14 @@ import Abs
 import ErrM
 
 import Prelude
-import TypeChecker
+import qualified TypeChecker
+import qualified LLVM
 
 import System.Environment (getArgs)
 import qualified Data.Map as Map
 import Control.Monad.State
+import System.FilePath (replaceExtension)
+import System.Process (callCommand)
 
 
 getProgram :: String -> Program
@@ -31,8 +34,12 @@ main = do
     let filePath = head args
     codeStr <- readFile filePath
     let program = getProgram codeStr
-    comp program
-
+    -- TypeChecker.comp program
+    let llFilename = replaceExtension filePath ".ll"
+    let bcFilename = replaceExtension filePath ".bc"
+    writeFile llFilename $  LLVM.comp program
+    callCommand $ "llvm-as " ++ llFilename ++ " -o " ++ bcFilename
+    
     -- let filename = takeFileName filePath
     -- let jasminFilename = replaceExtension filePath ".j"
     -- let fileDir = takeDirectory filePath

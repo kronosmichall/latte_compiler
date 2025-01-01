@@ -15,7 +15,7 @@ common warnings
 
 executable checker
     import:           warnings
-    other-modules: Abs, ErrM, Lex, Par, Print, TypeChecker
+    other-modules: Abs, ErrM, Lex, Par, Print, TypeChecker, LLVM
     build-depends:    base ^>=4.17.2.1, mtl, array, containers, process, filepath
     main-is:          Main.hs
     hs-source-dirs: src, latte
