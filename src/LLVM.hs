@@ -18,17 +18,19 @@ import Debug.Trace (trace)
 
 type Result = [Instr]
 type Instr = String
--- type Loc = Int
--- type Refs = Int
+-- type Loc = Integer
+-- type Refs = Integer
 -- type OriginLoc = Loc
 -- type CurrentLoc = Loc
-type Refs = Int
-type Register = Int
-type NextRef = Int
-type NextTmp = Int
+type Refs = Integer
+type Register = Integer
+type NextRef = Integer
+type NextTmp = Integer
 type MyState = (Map VarName (Register, Refs), NextRef, NextTmp, Result)
 type MyMonad = State MyState
+
 type VarName = String
+data VarVal = VarString String | VarInt Integer | VarBool Integer
 
 -- instance Show Instr where
 --     show (PrintInt loc) = "call void @printInt(i64 " ++ "%_" ++ show loc ++ ")"
@@ -92,12 +94,97 @@ newVarNoInit typ name = do
     modify (\(sts, _, tmp, res) -> (Map.insert name (ref, 1) sts, ref + 1, tmp, res ++ [instr]))
 
 
+assign :: VarName -> VarVal -> MyMonad ()
+assign var val = do
+    (sts, reg, tmp, res) <- get
+    let (register, refs) = case Map.lookup var sts of
+            Just val' -> val'
+            Nothing -> error $ "Variable " ++ var ++ " not found"
+    case val of
+        VarInt x -> do
+            let instr = "store i64 " ++ show x ++ ", i64* %" ++ show register
+            put (sts, reg, tmp, res ++ [instr])
+        VarBool x -> do
+            let instr = "store i1 " ++ show x ++ ", i1* %" ++ show register
+            put (sts, reg, tmp, res ++ [instr])
+        VarString x -> do
+            undefined
+
+
 declareItem :: MyType -> Item -> MyMonad ()
 declareItem typ (NoInit line (Ident name)) = newVarNoInit typ name
 declareItem typ (Init line (Ident name) expr) = do
-    undefined
+    newVarNoInit typ name
+    val <- eval expr
+    assign name val
 
+mulOp :: MulOp -> VarVal -> VarVal -> MyMonad VarVal
+mulOp op var1 var2 = do
+    case (var1, var2) of
+        (VarInt x, VarInt y) -> case op of
+            Times _ -> return (VarInt (x * y))
+            Div _ -> return (VarInt (x `div` y))
+            Mod _ -> return (VarInt (x `mod` y))
+        _ -> undefined
 
+relOp :: RelOp -> VarVal -> VarVal -> MyMonad VarVal
+relOp op var1 var2 = do
+    case (var1, var2) of
+        (VarInt x, VarInt y) -> case op of
+            LTH _ -> return (VarBool (if x < y then 1 else 0))
+            LE _ -> return (VarBool (if x <= y then 1 else 0))
+            GTH _ -> return (VarBool (if x > y then 1 else 0))
+            GE _ -> return (VarBool (if x >= y then 1 else 0))
+            EQU _ -> return (VarBool (if x == y then 1 else 0))
+            NE _ -> return (VarBool (if x /= y then 1 else 0))
+        _ -> undefined
+
+eval :: Expr -> MyMonad VarVal
+eval (EVar line (Ident name)) = undefined 
+eval (ELitInt _ x) = return (VarInt x)
+eval (ELitTrue _) = return (VarBool 1)
+eval (ELitFalse _) = return (VarBool 0) 
+eval (EApp line ident exprs) = undefined 
+eval (EString _ _) = undefined 
+eval (Not line e) = do
+    val <- eval e
+    case val of
+        VarBool x -> return (VarBool (1 - x))
+        _ -> undefined 
+eval (Neg line e) = do
+    val <- eval e
+    case val of
+        VarInt x -> return (VarInt (-x))
+        _ -> undefined 
+eval (EMul line e1 op e2) = do
+    val1 <- eval e1
+    val2 <- eval e2
+    mulOp op val1 val2
+
+eval (EAdd line e1 _ e2) = do
+    val1 <- eval e1
+    val2 <- eval e2
+    case (val1, val2) of
+        (VarInt x, VarInt y) -> return (VarInt (x + y))
+        _ -> undefined
+
+eval (ERel line e1 op e2) = do
+    val1 <- eval e1
+    val2 <- eval e2
+    relOp op val1 val2
+
+eval (EAnd line e1 e2) = do
+    val1 <- eval e1
+    val2 <- eval e2
+    case (val1, val2) of
+        (VarBool x, VarBool y) -> return (VarBool (if x == 1 && y == 1 then 1 else 0))
+        _ -> undefined
+eval (EOr line e1 e2) = do
+    val1 <- eval e1
+    val2 <- eval e2
+    case (val1, val2) of
+        (VarBool x, VarBool y) -> return (VarBool (if x == 1 || y == 1 then 1 else 0))
+        _ -> undefined
 
 exec :: [Stmt] ->  MyMonad ()
 exec [] = return ()

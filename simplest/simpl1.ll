@@ -9,8 +9,9 @@ define void @printInt(i64 %x) {
 define i64 @main(i64 %argc, i8** %argv) {
 
 %1= alloca i64
-%2= alloca i8*
-%3= alloca i1
+store i64 10, i64* %1
+%2= alloca i1
+store i1 1, i1* %2
 	ret i64 0
 }
 
