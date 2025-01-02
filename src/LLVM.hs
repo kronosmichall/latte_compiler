@@ -6,22 +6,8 @@ import Data.Map hiding (foldl, map)
 import qualified Data.Map as Map hiding (foldl, map)
 import Debug.Trace (trace)
 
--- data Instr =
-    -- PrintInt OriginLoc |
-    -- PrintString OriginLoc |
-    -- PrintBool OriginLoc |
-    -- Add OriginLoc Loc Loc |
-    -- Sub OriginLoc Loc Loc |
-    -- Mul OriginLoc Loc Loc |
-    -- Div OriginLoc Loc Loc |
-    -- Store OriginLoc Integer
-
 type Result = [Instr]
 type Instr = String
--- type Loc = Integer
--- type Refs = Integer
--- type OriginLoc = Loc
--- type CurrentLoc = Loc
 type Refs = Integer
 type Register = Integer
 type NextRef = Integer
@@ -32,46 +18,14 @@ type MyState = (VarMap, FunMap, NextRef, NextTmp, Result)
 type MyMonad = State MyState
 
 type VarName = String
-data VarVal = VarString String | VarInt Integer | VarBool Integer | VarVoid
+data VarVal = VarString String | VarInt Integer | VarBool Integer | VarTmp Integer
 
 instance Show VarVal where
     show (VarString x) = "i8* " ++ x
     show (VarInt x) = "i64 " ++ show x
     show (VarBool x) = "i1 " ++ show x
+    show (VarTmp t) = error $ "Cannot show tmp %tmp" ++ show t
 
--- instance Show Instr where
---     show (PrintInt loc) = "call void @printInt(i64 " ++ "%_" ++ show loc ++ ")"
---     show (PrintString loc) = "call void @printString(i64 " ++ "%_" ++ show loc ++ ")"
---     show (PrintBool loc) = "call void @printBool(i64 " ++ "%_" ++ show loc ++ ")"
---     show (Add loc1 loc2 loc3) =  "%_" ++ show loc1 ++ " = add i64 %_" ++ show loc2 ++ ", %_" ++ show loc3
---     show (Sub loc1 loc2 loc3) =  "%_" ++ show loc1 ++ " = sub i64 %_" ++ show loc2 ++ ", %_" ++ show loc3
---     show (Mul loc1 loc2 loc3) =  "%_" ++ show loc1 ++ " = mul i64 %_" ++ show loc2 ++ ", %_" ++ show loc3
---     show (Div loc1 loc2 loc3) =  "%_" ++ show loc1 ++ " = sdiv i64 %_" ++ show loc2 ++ ", %_" ++ show loc3
---     show (Store loc val) = "%_" ++ show loc ++ " = add i64 0, " ++ show val
-
-
-
--- eval :: Expr -> MyMonad MyType
--- eval (EVar line (Ident name)) = 
--- eval (ELitInt _ _) = 
--- eval (ELitTrue _) =
--- eval (ELitFalse _) = 
--- eval (EApp line ident exprs) = 
--- eval (EString _ _) = 
--- eval (Not line e) = do
-
--- eval (Neg line e) = do
-
--- eval (EMul line e1 _ e2) = do
-
--- eval (EAdd line e1 _ e2) = do
-
--- eval (ERel line e1 op e2) = do
-
-
--- eval (EAnd line e1 e2) = do
-
--- eval (EOr line e1 e2) = 
 
 data MyType = MyInt | MyStr | MyBool | MyVoid | MyFun MyType [MyType]
     deriving (Eq)
@@ -93,7 +47,7 @@ typeToMy (Fun _ typ typs) = MyFun (typeToMy typ) (map typeToMy typs)
 newVarNoInit :: MyType -> VarName -> MyMonad ()
 newVarNoInit typ name = do
     (_, _, ref, _, _) <- get
-    let instr = case typ of 
+    let instr = case typ of
             MyInt -> "%" ++ show ref ++ "= alloca i64"
             MyBool -> "%" ++ show ref ++ "= alloca i1"
             MyStr -> "%" ++ show ref ++ "= alloca i8*"
@@ -116,13 +70,13 @@ assign var val = do
             put (sts, funs, reg, tmp, res ++ [instr])
         VarString x -> do
             undefined
-        VarVoid -> do 
-            error "Cannot assign void"
+        e -> do
+            error $ "Cannot assign void" ++ show e
 
 
 -- int only
 assignLastTmp :: VarName -> MyMonad ()
-assignLastTmp var = do 
+assignLastTmp var = do
     (sts, funs, reg, tmp, res) <- get
     let (register, refs) = case Map.lookup var sts of
             Just val' -> val'
@@ -135,8 +89,8 @@ assignLastTmp var = do
 assignItem :: VarName -> Expr -> MyMonad ()
 assignItem name expr = do
     val <- eval expr
-    case val of 
-        VarVoid -> assignLastTmp name
+    case val of
+        (VarTmp t) -> assignLastTmp name
         _ -> assign name val
 
 declareItem :: MyType -> Item -> MyMonad ()
@@ -184,82 +138,88 @@ relOp op var1 var2 = do
 --             put (sts, funs, ref, tmp + 1, res ++ [str2])
 
 -- int only
-loadVarToTmp :: VarName -> MyMonad ()
-loadVarToTmp var = do 
+loadVarToTmp :: VarName -> MyMonad Integer
+loadVarToTmp var = do
     (sts, funs, reg, tmp, res) <- get
     let (register, refs) = case Map.lookup var sts of
             Just val' -> val'
             Nothing -> error $ "Variable " ++ var ++ " not found"
     let instr = "%" ++ "tmp" ++ show tmp ++ " = load i64, i64* %" ++ show register
     put (sts, funs, reg, tmp + 1, res ++ [instr])
+    return tmp
 
-loadValToTmp :: VarVal -> MyMonad ()
+loadValToTmp :: VarVal -> MyMonad Integer
 loadValToTmp val = do
     (sts, funs, reg, tmp, res) <- get
     let instr = "%" ++ "tmp" ++ show tmp ++ " = add " ++ show val ++ ", 0"
     put (sts, funs, reg, tmp + 1, res ++ [instr])
+    return tmp
 
 
 -- addLastTwoTmps :: 
-opLastTwoTmps :: String -> MyType -> MyMonad ()
-opLastTwoTmps op typ = do
+opLastTwoTmps :: Integer -> Integer -> String -> MyType  -> MyMonad Integer
+opLastTwoTmps t1 t2 op typ = do
     (sts, funs, reg, tmp, res) <- get
-    let lastTmp = tmp - 1
-    let lastTmp2 = tmp - 2
-    let instr = "%tmp" ++ show tmp ++ " = " ++ op  ++ " " ++ show typ ++ " %tmp" ++ show lastTmp2 ++ ", %tmp" ++ show lastTmp
+    let instr = "%tmp" ++ show tmp ++ " = " ++ op  ++ " " ++ show typ ++ " %tmp" ++ show t1 ++ ", %tmp" ++ show t2
     put (sts, funs, reg, tmp + 1, res ++ [instr])
+    return tmp
 
-addTwoLastTmps :: MyMonad ()
-addTwoLastTmps = opLastTwoTmps "add" MyInt
+addTwoLastTmps :: Integer -> Integer -> MyMonad Integer
+addTwoLastTmps t1 t2 = opLastTwoTmps t1 t2 "add" MyInt
 
-mulTwoLastTmps :: MyMonad ()
-mulTwoLastTmps = opLastTwoTmps "mul" MyInt
+mulTwoLastTmps :: Integer -> Integer -> MyMonad Integer
+mulTwoLastTmps t1 t2 = opLastTwoTmps t1 t2 "mul" MyInt
 
-divTwoLastTmps :: MyMonad ()
-divTwoLastTmps = opLastTwoTmps "sdiv" MyInt
+divTwoLastTmps :: Integer -> Integer -> MyMonad Integer
+divTwoLastTmps t1 t2 = opLastTwoTmps t1 t2 "sdiv" MyInt
 
-modTwoLastTmps :: MyMonad ()
-modTwoLastTmps = opLastTwoTmps "srem" MyInt
+modTwoLastTmps :: Integer -> Integer -> MyMonad Integer
+modTwoLastTmps t1 t2 = opLastTwoTmps t1 t2 "srem" MyInt
 
-mulOpTwoLastTmps :: MulOp -> MyMonad ()
-mulOpTwoLastTmps (Times _) = mulTwoLastTmps
-mulOpTwoLastTmps (Div _) = divTwoLastTmps
-mulOpTwoLastTmps (Mod _) = modTwoLastTmps
-
+mulOpTwoLastTmps :: Integer -> Integer -> MulOp -> MyMonad Integer
+mulOpTwoLastTmps t1 t2 (Times _) = mulTwoLastTmps t1 t2
+mulOpTwoLastTmps t1 t2 (Div _) = divTwoLastTmps t1 t2
+mulOpTwoLastTmps t1 t2(Mod _) = modTwoLastTmps t1 t2
 
 eval :: Expr -> MyMonad VarVal
-eval (EVar line (Ident name)) = loadVarToTmp name >> return VarVoid 
+eval (EVar line (Ident name)) = do
+    tmp <- loadVarToTmp name
+    return (VarTmp tmp)
 eval (ELitInt _ x) = return (VarInt x)
 eval (ELitTrue _) = return (VarBool 1)
-eval (ELitFalse _) = return (VarBool 0) 
+eval (ELitFalse _) = return (VarBool 0)
 eval (EApp line (Ident name) exprs) = do
     -- vals <- mapM eval exprs 
     -- funApply name vals
     undefined
 
-eval (EString _ _) = undefined 
+eval (EString _ _) = undefined
 eval (Not line e) = do
     val <- eval e
     case val of
         VarBool x -> return ( VarBool (1 - x))
-        _ -> undefined 
+        _ -> undefined
 eval (Neg line e) = do
     val <- eval e
     case val of
         VarInt x -> return (VarInt (-x))
-        _ -> undefined 
+        _ -> undefined
 eval (EMul line e1 op e2) = do
     val1 <- eval e1
     val2 <- eval e2
     case (val1, val2) of
         (VarInt x, VarInt y) -> mulOp op val1 val2
-        (VarVoid, VarVoid) -> mulOpTwoLastTmps op >> return VarVoid
-        (VarInt x, VarVoid) -> do
-            loadValToTmp (VarInt x)
-            mulOpTwoLastTmps op >> return VarVoid
-        (VarVoid, VarInt y) -> do
-            loadValToTmp (VarInt y)
-            mulOpTwoLastTmps op >> return VarVoid
+        (VarTmp t1, VarTmp t2) -> do
+            tmp <- mulOpTwoLastTmps t1 t2 op
+            return (VarTmp tmp)
+        (VarInt x, VarTmp t2) -> do
+            t1 <- loadValToTmp (VarInt x)
+            tmp <- mulOpTwoLastTmps t1 t2 op
+            return (VarTmp tmp)
+        (VarTmp t1, VarInt y) -> do
+            t2 <- loadValToTmp (VarInt y)
+            tmp <- mulOpTwoLastTmps t1 t2 op
+            return (VarTmp tmp)
         _ -> undefined
 
 eval (EAdd line e1 _ e2) = do
@@ -267,13 +227,17 @@ eval (EAdd line e1 _ e2) = do
     val2 <- eval e2
     case (val1, val2) of
         (VarInt x, VarInt y) -> return (VarInt (x + y))
-        (VarVoid, VarVoid) -> addTwoLastTmps >> return VarVoid
-        (VarInt x, VarVoid) -> do
-            loadValToTmp (VarInt x)
-            addTwoLastTmps >> return VarVoid
-        (VarVoid, VarInt y) -> do
-            loadValToTmp (VarInt y)
-            addTwoLastTmps >> return VarVoid
+        (VarTmp t1, VarTmp t2) -> do
+            tmp <- addTwoLastTmps t1 t2 
+            return (VarTmp tmp)
+        (VarInt x, VarTmp t2) -> do
+            t1 <- loadValToTmp (VarInt x)
+            tmp <- addTwoLastTmps t1 t2 
+            return (VarTmp tmp)
+        (VarTmp t1, VarInt y) -> do
+            t2 <- loadValToTmp (VarInt y)
+            tmp <- addTwoLastTmps t1 t2 
+            return (VarTmp tmp)
         _ -> undefined
 
 eval (ERel line e1 op e2) = do
@@ -351,7 +315,7 @@ footer = unlines [
 
 
 findMain :: [TopDef] -> TopDef
-findMain topdefs = 
+findMain topdefs =
     head (Prelude.filter isMain topdefs)
     where
         isMain (FnDef _ _ (Ident "main") _ _) = True
@@ -361,7 +325,7 @@ findMain topdefs =
 execMain :: [TopDef] -> MyMonad ()
 execMain topdefs =  do
     let main = findMain topdefs
-    case main of 
+    case main of
         FnDef _ _ _ _ (Block _ mainBlock) -> exec mainBlock
 
 execProgram :: Program -> MyMonad ()
