@@ -206,11 +206,25 @@ opLastTwoTmps op typ = do
     (sts, funs, reg, tmp, res) <- get
     let lastTmp = tmp - 1
     let lastTmp2 = tmp - 2
-    let instr = "%tmp" ++ show tmp ++ " = " ++ op  ++ " " ++ show typ ++ " %tmp" ++ show lastTmp ++ ", %tmp" ++ show lastTmp2
+    let instr = "%tmp" ++ show tmp ++ " = " ++ op  ++ " " ++ show typ ++ " %tmp" ++ show lastTmp2 ++ ", %tmp" ++ show lastTmp
     put (sts, funs, reg, tmp + 1, res ++ [instr])
 
 addTwoLastTmps :: MyMonad ()
 addTwoLastTmps = opLastTwoTmps "add" MyInt
+
+mulTwoLastTmps :: MyMonad ()
+mulTwoLastTmps = opLastTwoTmps "mul" MyInt
+
+divTwoLastTmps :: MyMonad ()
+divTwoLastTmps = opLastTwoTmps "sdiv" MyInt
+
+modTwoLastTmps :: MyMonad ()
+modTwoLastTmps = opLastTwoTmps "srem" MyInt
+
+mulOpTwoLastTmps :: MulOp -> MyMonad ()
+mulOpTwoLastTmps (Times _) = mulTwoLastTmps
+mulOpTwoLastTmps (Div _) = divTwoLastTmps
+mulOpTwoLastTmps (Mod _) = modTwoLastTmps
 
 
 eval :: Expr -> MyMonad VarVal
@@ -237,7 +251,16 @@ eval (Neg line e) = do
 eval (EMul line e1 op e2) = do
     val1 <- eval e1
     val2 <- eval e2
-    mulOp op val1 val2
+    case (val1, val2) of
+        (VarInt x, VarInt y) -> mulOp op val1 val2
+        (VarVoid, VarVoid) -> mulOpTwoLastTmps op >> return VarVoid
+        (VarInt x, VarVoid) -> do
+            loadValToTmp (VarInt x)
+            mulOpTwoLastTmps op >> return VarVoid
+        (VarVoid, VarInt y) -> do
+            loadValToTmp (VarInt y)
+            mulOpTwoLastTmps op >> return VarVoid
+        _ -> undefined
 
 eval (EAdd line e1 _ e2) = do
     val1 <- eval e1
