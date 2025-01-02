@@ -1,7 +1,8 @@
 int main() {
 	int x = 10;
-    boolean z = true;
-    //string y;
+    int y = x;
+    int z = x + 2;  
     // printInt(x);
+    //string y = "abc";
     //return 0;
 }

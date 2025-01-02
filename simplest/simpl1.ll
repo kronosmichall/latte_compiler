@@ -10,8 +10,14 @@ define i64 @main(i64 %argc, i8** %argv) {
 
 %1= alloca i64
 store i64 10, i64* %1
-%2= alloca i1
-store i1 1, i1* %2
+%2= alloca i64
+%tmp1 = load i64, i64* %1
+store i64 %tmp1, i64* %2
+%3= alloca i64
+%tmp2 = load i64, i64* %1
+%tmp3 = add i64 2, 0
+%tmp4 = add i64 %tmp3, %tmp2
+store i64 %tmp4, i64* %3
 	ret i64 0
 }
 
