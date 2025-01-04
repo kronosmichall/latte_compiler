@@ -37,7 +37,7 @@ main = do
     -- TypeChecker.comp program
     let llFilename = replaceExtension filePath ".ll"
     let bcFilename = replaceExtension filePath ".bc"
-    writeFile llFilename $  LLVM.comp program
+    writeFile llFilename $  LLVM.comp program codeStr
     callCommand $ "llvm-as " ++ llFilename ++ " -o " ++ bcFilename
     
     -- let filename = takeFileName filePath

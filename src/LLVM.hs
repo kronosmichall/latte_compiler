@@ -6,6 +6,7 @@ import Data.Map hiding (foldl, map)
 import qualified Data.Map as Map hiding (foldl, map)
 import Debug.Trace (trace)
 import TypeChecker (Var)
+import Data.List (intercalate)
 
 type Result = [Instr]
 type Instr = String
@@ -189,11 +190,11 @@ funApply funName args = do
     let args2 = zipWith (\argType arg -> show argType ++ " " ++ varValShowNoType arg) argTypes args
 
     if typ == MyVoid then do
-        let instr = "call void @" ++ funName ++ "(" ++ unwords args2 ++ ")"
+        let instr = "call void @" ++ funName ++ "(" ++ intercalate ", " args2 ++ ")"
         put (sts, funs, reg, tmp, res ++ [instr])
         return 0
     else do
-        let instr = "%tmp" ++ show tmp ++" = call " ++ show typ ++ " @" ++ funName ++ "(" ++ unwords args2 ++ ")"
+        let instr = "%tmp" ++ show tmp ++" = call " ++ show typ ++ " @" ++ funName ++ "(" ++ intercalate ", " args2 ++ ")"
         put (sts, funs, reg, tmp + 1, res ++ [instr])
         return tmp
 
@@ -315,9 +316,22 @@ exec (Ass line (Ident name) expr : xs) = do
 -- exec (Incr line (Ident name) : xs) = do
 
 -- exec (Decr line  ident : xs) = 
--- exec (Ret line expr : xs) = do
+exec (Ret line expr : xs) = do
+    (sts, funs, ref, tmp, res) <- get
+    t1 <- eval expr
+    let command = case t1 of
+            VarInt x -> "ret i64 " ++ show x
+            VarBool x -> "ret i1 " ++ show x
+            VarTmp t -> "ret i64 %tmp" ++ show t
+            _ -> error "Unsupported return type"
+    put (sts, funs, ref, tmp, res ++ [command])
+    exec xs
 
--- exec (VRet line : xs) = do
+exec (VRet line : xs) = do
+    (sts, funs, ref, tmp, res) <- get
+    let command = "ret"
+    put (sts, funs, ref, tmp, res ++ [command])
+    -- exec xs
 
 -- exec (Cond line expr stmt : xs) = do
 
@@ -342,8 +356,7 @@ header = unlines [
     "\tcall i64 (i8*, ...) @printf(i8* getelementptr([4 x i8], [4 x i8]* @format, i64 0, i64 0), i64 %x)",
     "\tret void",
     "}",
-    "",
-    "define i64 @main(i64 %argc, i8** %argv) {"
+    ""
     ]
 
 footer :: String
@@ -359,18 +372,43 @@ findMain topdefs =
         isMain (FnDef _ _ (Ident "main") _ _) = True
         isMain _ = False
 
+topDefHeader :: TopDef -> String
+topDefHeader (FnDef _ typ (Ident name) args _) = "define " ++ show (typeToMy typ) ++ " @" ++ name ++ "(" ++ intercalate ", " (map (\(Arg _ typ (Ident name)) -> show (typeToMy typ) ++ " %" ++ name) args) ++ ") {"
 
-execMain :: [TopDef] -> MyMonad ()
-execMain topdefs =  do
-    let main = findMain topdefs
-    case main of
-        FnDef _ _ _ _ (Block _ mainBlock) -> exec mainBlock
+execTopDef :: TopDef -> MyMonad ()
+execTopDef topdef = do
+    let funHeader = topDefHeader topdef
+    trace funHeader $ return ()
+    (sts, funs, ref, tmp, res) <- get
+    put (sts, funs, ref, tmp, res ++ [funHeader])
+    case topdef of
+        (FnDef _ _ _ _ (Block _ stmts)) -> do
+            exec stmts
 
-execProgram :: Program -> MyMonad ()
-execProgram (Program _ topdefs) = do
+    (sts', funs', ref', tmp', res') <- get
+    put (sts', funs', ref', tmp', res' ++ ["}"])
+
+initTopDef :: TopDef -> MyMonad ()
+initTopDef (FnDef pos typ (Ident name) args block) = do
+    let typ' = typeToMy typ
+    let args' = map (\(Arg _ typ (Ident name)) -> typeToMy typ) args
+    modify (\(sts, funs, ref, tmp, res) -> (sts, Map.insert name (typ', args') funs, ref, tmp, res))
+
+-- topDefLineEnd :: Int -> [Int] -> Int
+-- topDefLineEnd line (x:xs) = 
+
+topDefCode :: (Int, Int) -> String -> String
+topDefCode (start, end) code = unlines $ Prelude.take (end - start) $ Prelude.drop start $ lines code
+
+
+execProgram :: Program -> String -> MyMonad ()
+execProgram (Program _ topdefs) code = do
     -- initPrints
-    -- initTopDefs topdefs
-    execMain topdefs
+    let funs = Prelude.filter (\(FnDef _ _ (Ident name) _ _) -> name /= "main") topdefs
+    forM_  funs initTopDef
+    forM_  funs execTopDef
+    -- let main = findMain topdefs
+    -- execTopDef main
 
 newFunctionsMap :: FunMap
 newFunctionsMap = Map.insert "printBool" (MyVoid, [MyBool]) $
@@ -381,8 +419,8 @@ newFunctionsMap = Map.insert "printBool" (MyVoid, [MyBool]) $
 newState :: MyState
 newState  = (Map.empty, newFunctionsMap, 1, 1, [])
 
-comp :: Program -> String
-comp prog = do
-    let func = runState (execProgram prog)
+comp :: Program -> String -> String
+comp prog code = do
+    let func = runState (execProgram prog code)
     let ((), (_, _, _, _, res)) = func newState
     unlines $ [header] ++ res ++ [footer]

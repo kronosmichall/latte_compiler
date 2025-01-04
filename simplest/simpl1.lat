@@ -1,3 +1,7 @@
+int two() {
+    return 2;
+}
+
 int main() {
 	int x = 10;
     int y = x - 9;
@@ -7,7 +11,7 @@ int main() {
     // printInt(z);
 
     //string y = "abc";
-    //return 0;
+    return 0;
 }
 
 // int mul(int a, int b) {
