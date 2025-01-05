@@ -50,9 +50,9 @@ newVarNoInit :: MyType -> VarName -> MyMonad ()
 newVarNoInit typ name = do
     (_, _, ref, _, _) <- get
     let instr = case typ of
-            MyInt -> "%" ++ show ref ++ "= alloca i64"
-            MyBool -> "%" ++ show ref ++ "= alloca i1"
-            MyStr -> "%" ++ show ref ++ "= alloca i8*"
+            MyInt -> "%ref" ++ show ref ++ " = alloca i64"
+            MyBool -> "%ref" ++ show ref ++ " = alloca i1"
+            MyStr -> "%ref" ++ show ref ++ " = alloca i8*"
             _ -> undefined
     modify (\(sts, funs,  _, tmp, res) -> (Map.insert name (ref, 1) sts, funs, ref + 1, tmp, res ++ [instr]))
 
@@ -65,10 +65,10 @@ assign var val = do
             Nothing -> error $ "Variable " ++ var ++ " not found"
     case val of
         VarInt x -> do
-            let instr = "store i64 " ++ show x ++ ", i64* %" ++ show register
+            let instr = "store i64 " ++ show x ++ ", i64* %ref" ++ show register
             put (sts, funs, reg, tmp, res ++ [instr])
         VarBool x -> do
-            let instr = "store i1 " ++ show x ++ ", i1* %" ++ show register
+            let instr = "store i1 " ++ show x ++ ", i1* %ref" ++ show register
             put (sts, funs, reg, tmp, res ++ [instr])
         VarString x -> do
             undefined
@@ -85,7 +85,7 @@ assignLastTmp var = do
             Nothing -> error $ "Variable " ++ var ++ " not found"
 
     let lastTmp = tmp - 1
-    let instr = "store i64 %" ++ "tmp" ++ show lastTmp ++ ", i64* %" ++ show register
+    let instr = "store i64 %" ++ "tmp" ++ show lastTmp ++ ", i64* %ref" ++ show register
     put (sts, funs, reg, tmp, res ++ [instr])
 
 assignItem :: VarName -> Expr -> MyMonad ()
@@ -131,7 +131,7 @@ loadVarToTmp var = do
     let (register, refs) = case Map.lookup var sts of
             Just val' -> val'
             Nothing -> error $ "Variable " ++ var ++ " not found"
-    let instr = "%" ++ "tmp" ++ show tmp ++ " = load i64, i64* %" ++ show register
+    let instr = "%" ++ "tmp" ++ show tmp ++ " = load i64, i64* %ref" ++ show register
     put (sts, funs, reg, tmp + 1, res ++ [instr])
     return tmp
 
@@ -317,8 +317,8 @@ exec (Ass line (Ident name) expr : xs) = do
 
 -- exec (Decr line  ident : xs) = 
 exec (Ret line expr : xs) = do
-    (sts, funs, ref, tmp, res) <- get
     t1 <- eval expr
+    (sts, funs, ref, tmp, res) <- get
     let command = case t1 of
             VarInt x -> "ret i64 " ++ show x
             VarBool x -> "ret i1 " ++ show x
@@ -359,12 +359,6 @@ header = unlines [
     ""
     ]
 
-footer :: String
-footer = unlines [
-  "\tret i64 0",
-  "}"]
-
-
 findMain :: [TopDef] -> TopDef
 findMain topdefs =
     head (Prelude.filter isMain topdefs)
@@ -401,8 +395,8 @@ topDefCode :: (Int, Int) -> String -> String
 topDefCode (start, end) code = unlines $ Prelude.take (end - start) $ Prelude.drop start $ lines code
 
 
-execProgram :: Program -> String -> MyMonad ()
-execProgram (Program _ topdefs) code = do
+execProgram :: Program -> MyMonad ()
+execProgram (Program _ topdefs) = do
     -- initPrints
     let funs = Prelude.filter (\(FnDef _ _ (Ident name) _ _) -> name /= "main") topdefs
     forM_  funs initTopDef
@@ -419,8 +413,42 @@ newFunctionsMap = Map.insert "printBool" (MyVoid, [MyBool]) $
 newState :: MyState
 newState  = (Map.empty, newFunctionsMap, 1, 1, [])
 
-comp :: Program -> String -> String
-comp prog code = do
-    let func = runState (execProgram prog code)
+comp :: Program -> String
+comp prog = do
+    let func = runState (execProgram prog)
     let ((), (_, _, _, _, res)) = func newState
-    unlines $ [header] ++ res ++ [footer]
+    unlines $ header : res
+
+
+showSts :: MyMonad ()
+showSts = do
+    (sts, funs, ref, tmp, res) <- get
+    trace (show sts) $ return ()
+
+showFuns :: MyMonad ()
+showFuns = do
+    (sts, funs, ref, tmp, res) <- get
+    trace (show funs) $ return ()
+
+showRef :: MyMonad ()
+showRef = do
+    (sts, funs, ref, tmp, res) <- get
+    trace (show ref) $ return ()
+
+showTmp :: MyMonad ()
+showTmp = do
+    (sts, funs, ref, tmp, res) <- get
+    trace (show tmp) $ return ()
+
+showRes :: MyMonad ()
+showRes = do
+    (sts, funs, ref, tmp, res) <- get
+    trace (unlines res) $ return ()
+
+showAll :: MyMonad ()
+showAll = do
+    showSts
+    -- showFuns
+    showRef
+    showTmp
+    showRes
