@@ -76,6 +76,10 @@ getVarReg name = do
     case Map.lookup name sts of
         Just reg -> return reg
         Nothing -> error $ "Variable " ++ name ++ " not found"
+
+getValReg :: VarVal -> MyMonad Register
+getValReg (VarReg (reg, ref, typ)) = return reg
+getValReg _ = error "Not a register"
 -- setVar :: VarName -> VarVal -> MyMonad ()
 -- setVar name val = do
 
@@ -105,6 +109,7 @@ setVar name val = do
                 let i1 = "%var" ++ show newRef ++ " = load " ++ show typ2 ++ ", " ++ show (MyPtr typ2) ++ " %var" ++ show reg2
                 let i2 = "store " ++ show typ2 ++ " %var" ++ show newRef ++ ", " ++ show typ ++ " %var" ++ show reg
                 combineInstr [i1, i2]
+            VarReg (reg2, ref2, typ2) -> "store i64 %var" ++ show reg2 ++ ", i64* %var" ++ show reg
             _ -> error "Unsupported type"
     addInstr instr
     case val of
@@ -145,6 +150,7 @@ unwrap (VarReg (reg, ref, MyPtr typ)) = do
     return (VarReg (newRef, 1, typ))
 unwrap x = return x
 
+
 eval :: Expr -> MyMonad VarVal
 eval (EVar line (Ident name)) = do
     reg <- getVarReg name
@@ -165,7 +171,20 @@ eval (Neg line e) = do
 eval (EMul line e1 op e2) = do
     undefined
 eval (EAdd line e1 (Plus _) e2) = do
-   undefined
+    v1 <- eval e1
+    v2 <- eval e2
+    case (v1, v2) of
+        (VarInt x, VarInt y) -> return (VarInt (x + y))
+        (VarReg (r1, ref1, MyPtr MyInt), VarInt y) -> do
+            v1' <- unwrap v1
+            newRef <- nextReg
+            r1' <- getValReg v1'
+            let instr = "%var" ++ show newRef ++ " = add i64 " ++ show r1' ++ ", " ++ show y
+            addInstr instr
+            addReg
+            return (VarReg (newRef, 1, MyInt))
+        e -> error $ "Unsupported type" ++ show e
+
 eval (EAdd line e1 (Minus _) e2) = do
     undefined
 eval (ERel line e1 op e2) = do
