@@ -7,7 +7,17 @@ define void @printInt(i64 %x) {
 }
 
 
-define i64 @id(i64 %ref1) {
-%tmp1 = load i64, i64* %ref1
-ret i64 %tmp1
+define i64 @main() {
+	%var1 = alloca i64
+	store i64 2, i64* %var1
+	store i64 4, i64* %var1
+	%var2 = alloca i64
+	%var3 = load i64, i64* %var1
+	store i64 %var3, i64* %var2
+	%var4 = load i64, i64* %var1
+	call void @printInt(i64 %var4)
+	%var5 = load i64, i64* %var2
+	call void @printInt(i64 %var5)
+	ret i64 0
 }
+
