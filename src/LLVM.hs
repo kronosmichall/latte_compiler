@@ -170,7 +170,10 @@ eval (Neg line e) = do
     undefined
 eval (EMul line e1 op e2) = do
     undefined
-eval (EAdd line e1 (Plus _) e2) = do
+eval (EAdd line e1 op e2) = do
+    let opStr = case op of
+            Plus _ -> "add"
+            Minus _ -> "sub"
     v1 <- eval e1
     v2 <- eval e2
     case (v1, v2) of
@@ -179,14 +182,12 @@ eval (EAdd line e1 (Plus _) e2) = do
             v1' <- unwrap v1
             newRef <- nextReg
             r1' <- getValReg v1'
-            let instr = "%var" ++ show newRef ++ " = add i64 " ++ show r1' ++ ", " ++ show y
+            let instr = "%var" ++ show newRef ++ " = " ++ opStr ++ " i64 " ++ show r1' ++ ", " ++ show y
             addInstr instr
             addReg
             return (VarReg (newRef, 1, MyInt))
         e -> error $ "Unsupported type" ++ show e
 
-eval (EAdd line e1 (Minus _) e2) = do
-    undefined
 eval (ERel line e1 op e2) = do
     undefined
 eval (EAnd line e1 e2) = do
