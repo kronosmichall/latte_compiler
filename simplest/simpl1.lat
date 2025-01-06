@@ -18,20 +18,22 @@ int five() {
     return x;
 }
 
+int id(int x) {
+    return x;
+}
+
 int main() {
 	int x = 10;
-    int y = x - 9;
-    // int z = mul(x + 2 + 1, y + 1);  
+    int y = id(x);
+    int y2 = id(10);
     printInt(x);
     printInt(y);
-    printInt(two() + three() + four());
-    // printInt(z);
+    printInt(y2);
 
-    //string y = "abc";
     return 0;
 }
 
-// int mul(int a, int b) {
-//     x = a * b;
-//     return x;
-// }
+int mul(int a, int b) {
+    int x = a * b;
+    return x;
+}

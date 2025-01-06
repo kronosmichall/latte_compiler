@@ -5,7 +5,6 @@ import Control.Monad.State
 import Data.Map hiding (foldl, map)
 import qualified Data.Map as Map hiding (foldl, map)
 import Debug.Trace (trace)
-import TypeChecker (Var)
 import Data.List (intercalate)
 
 type Result = [Instr]
@@ -369,6 +368,13 @@ findMain topdefs =
 topDefHeader :: TopDef -> String
 topDefHeader (FnDef _ typ (Ident name) args _) = "define " ++ show (typeToMy typ) ++ " @" ++ name ++ "(" ++ intercalate ", " (map (\(Arg _ typ (Ident name)) -> show (typeToMy typ) ++ " %" ++ name) args) ++ ") {"
 
+initArg :: Arg -> MyMonad ()
+initArg (Arg _ _ (Ident name)) = do
+    modify (\(sts, funs,  ref, tmp, res) -> (Map.insert name (ref, 1) sts, funs, ref + 1, tmp, res))
+
+initArgs :: [Arg] -> MyMonad ()
+initArgs = mapM_ initArg
+
 execTopDef :: TopDef -> MyMonad ()
 execTopDef topdef = do
     let funHeader = topDefHeader topdef
@@ -376,11 +382,12 @@ execTopDef topdef = do
     (sts, funs, ref, tmp, res) <- get
     put (sts, funs, ref, tmp, res ++ [funHeader])
     case topdef of
-        (FnDef _ _ _ _ (Block _ stmts)) -> do
+        (FnDef line ret name args (Block _ stmts)) -> do
+            initArgs args
             exec stmts
 
     (sts', funs', ref', tmp', res') <- get
-    put (sts', funs', ref', tmp', res' ++ ["}"])
+    put (sts, funs', ref, tmp, res' ++ ["}", ""])
 
 initTopDef :: TopDef -> MyMonad ()
 initTopDef (FnDef pos typ (Ident name) args block) = do
@@ -401,8 +408,8 @@ execProgram (Program _ topdefs) = do
     let funs = Prelude.filter (\(FnDef _ _ (Ident name) _ _) -> name /= "main") topdefs
     forM_  funs initTopDef
     forM_  funs execTopDef
-    -- let main = findMain topdefs
-    -- execTopDef main
+    let main = findMain topdefs
+    execTopDef main
 
 newFunctionsMap :: FunMap
 newFunctionsMap = Map.insert "printBool" (MyVoid, [MyBool]) $
