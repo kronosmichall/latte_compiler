@@ -36,6 +36,9 @@ int main() {
     boolean b2 = false;
     boolean b3 = b1 && b2;
 
+    boolean test = y > x;
+    boolean test2 = x < 2;
+
     return 0;
 }
 

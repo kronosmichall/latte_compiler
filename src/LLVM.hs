@@ -173,8 +173,8 @@ getBaseType (VarString x) = MyStr
 getBaseType (VarReg (_, _, MyPtr typ)) = typ
 getBaseType (VarReg (_, _, typ)) = typ
 
-evalOp' :: VarVal -> String -> VarVal -> MyMonad VarVal
-evalOp' v1 opStr v2 = do
+evalOp'' :: VarVal -> String -> VarVal -> MyType -> MyMonad VarVal
+evalOp'' v1 opStr v2 typ = do
     case (v1, v2) of
         (VarInt x, VarInt y) -> return (VarInt (x + y))
         (_, _) -> do
@@ -182,10 +182,16 @@ evalOp' v1 opStr v2 = do
             addReg
             s1 <- evalVarStr v1
             s2 <- evalVarStr v2
-            let typ = getBaseType v1
-            let instr = "%var" ++ show newRef ++ " = " ++ opStr ++ " " ++ show typ ++ " " ++ s1 ++ ", " ++ s2
+            let typ2 = getBaseType v1
+            let instr = "%var" ++ show newRef ++ " = " ++ opStr ++ " " ++ show typ2 ++ " " ++ s1 ++ ", " ++ s2
             addInstr instr
             return (VarReg (newRef, 1, typ))
+
+
+evalOp' :: VarVal -> String -> VarVal -> MyMonad VarVal
+evalOp' v1 opStr v2 = do
+    let typ = getBaseType v1
+    evalOp'' v1 opStr v2 typ
 
 
 eval :: Expr -> MyMonad VarVal
@@ -221,7 +227,16 @@ eval (EAdd line e1 op e2) = do
             Minus _ -> "sub"
     evalOp e1 opStr e2
 eval (ERel line e1 op e2) = do
-    undefined
+    let opStr = case op of
+            LTH _ -> "icmp slt"
+            LE _ -> "icmp sle"
+            GTH _ -> "icmp sgt"
+            GE _ -> "icmp sge"
+            EQU _ -> "icmp eq"
+            NE _ -> "icmp ne"
+    v1 <- eval e1
+    v2 <- eval e2
+    evalOp'' v1 opStr v2 MyBool
 eval (EAnd line e1 e2) = do
     let opStr = "and"
     evalOp e1 opStr e2
@@ -278,7 +293,7 @@ exec other = do
 header :: String
 header = unlines [
     "@intFormat = internal constant [4 x i8] c\"%d\\0A\\00\"",
-    "@strFormat = private unnamed_addr constant [15 x i8] c\"runtime error\n\00\", align 1",
+    "@strFormat = private unnamed_addr constant [14 x i8] c\"runtime error\00\", align 1",
     "declare i64 @printf(i8*, ...)",
     "",
     "declare void @exit()",
@@ -291,7 +306,7 @@ header = unlines [
     "\tret void",
     "}",
     "define void @error() {",
-    "\t%msg = getelementptr inbounds [15 x i8], [15 x i8]* @strFormat, i32 0, i32 0",
+    "\t%msg = getelementptr inbounds [14 x i8], [14 x i8]* @strFormat, i32 0, i32 0",
     "\tcall void @printString(i8* %msg)",
     "\tcall void @exit()",
     "\tret void",
