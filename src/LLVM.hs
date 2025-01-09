@@ -100,7 +100,6 @@ addReg = do
 
 setVar :: VarName -> VarVal -> MyMonad ()
 setVar name val = do
-    trace (name ++ show val) $ return ()
     (reg, ref, typ) <- getVarReg name
     newRef <- nextReg
     let instr = case val of
@@ -111,7 +110,7 @@ setVar name val = do
                 let i1 = "%var" ++ show newRef ++ " = load " ++ show typ2 ++ ", " ++ show (MyPtr typ2) ++ " %var" ++ show reg2
                 let i2 = "store " ++ show typ2 ++ " %var" ++ show newRef ++ ", " ++ show typ ++ " %var" ++ show reg
                 combineInstr [i1, i2]
-            VarReg (reg2, ref2, typ2) -> "store i64 %var" ++ show reg2 ++ ", i64* %var" ++ show reg
+            VarReg (reg2, ref2, typ2) -> "store " ++ show typ2 ++ " %var" ++ show reg2 ++ ", " ++ show typ ++ " %var" ++ show reg
             _ -> error "Unsupported type"
     addInstr instr
     case val of
@@ -160,12 +159,19 @@ evalOp e1 opStr e2 = do
 
 evalVarStr :: VarVal -> MyMonad String
 evalVarStr (VarInt x) = return $ show x
-evalVarStr  (VarReg(r1, ref1, MyInt)) = return $ "%var" ++ show r1
-evalVarStr  (VarReg(r1, ref1, MyPtr MyInt)) = do
-    v1' <- unwrap (VarReg(r1, ref1, MyPtr MyInt))
+evalVarStr  (VarReg(r1, ref1, MyPtr typ)) = do
+    v1' <- unwrap (VarReg(r1, ref1, MyPtr typ))
     r1' <- getValReg v1'
     return $ "%var" ++ show r1'
+evalVarStr  (VarReg(r1, ref1, typ)) = return $ "%var" ++ show r1
 evalVarStr _ = error "Unsupported type"
+
+getBaseType :: VarVal -> MyType
+getBaseType (VarInt x) = MyInt
+getBaseType (VarBool x) = MyBool
+getBaseType (VarString x) = MyStr
+getBaseType (VarReg (_, _, MyPtr typ)) = typ
+getBaseType (VarReg (_, _, typ)) = typ
 
 evalOp' :: VarVal -> String -> VarVal -> MyMonad VarVal
 evalOp' v1 opStr v2 = do
@@ -176,9 +182,10 @@ evalOp' v1 opStr v2 = do
             addReg
             s1 <- evalVarStr v1
             s2 <- evalVarStr v2
-            let instr = "%var" ++ show newRef ++ " = " ++ opStr ++ " i64 " ++ s1 ++ ", " ++ s2
+            let typ = getBaseType v1
+            let instr = "%var" ++ show newRef ++ " = " ++ opStr ++ " " ++ show typ ++ " " ++ s1 ++ ", " ++ s2
             addInstr instr
-            return (VarReg (newRef, 1, MyInt))
+            return (VarReg (newRef, 1, typ))
 
 
 eval :: Expr -> MyMonad VarVal
@@ -195,9 +202,13 @@ eval (EApp line (Ident name) exprs) = do
 eval (EString _ _) = do
     undefined
 eval (Not line e) = do
-    undefined
+    v <- eval e
+    let v2 = VarBool 1
+    evalOp' v "xor" v2
 eval (Neg line e) = do
-    undefined
+    v1 <- eval e
+    let v2 = VarInt (-1)
+    evalOp' v1 "add" v2
 eval (EMul line e1 op e2) = do
     let opStr = case op of
             Times _ -> "mul"
@@ -212,9 +223,11 @@ eval (EAdd line e1 op e2) = do
 eval (ERel line e1 op e2) = do
     undefined
 eval (EAnd line e1 e2) = do
-    undefined
+    let opStr = "and"
+    evalOp e1 opStr e2
 eval (EOr line e1 e2) = do
-    undefined
+    let opStr = "or"
+    evalOp e1 opStr e2
 exec :: [Stmt] ->  MyMonad ()
 exec [] = return ()
 exec (Empty _ : xs) = exec xs
@@ -264,11 +277,23 @@ exec other = do
 
 header :: String
 header = unlines [
-    "@format = internal constant [4 x i8] c\"%d\\0A\\00\"",
+    "@intFormat = internal constant [4 x i8] c\"%d\\0A\\00\"",
+    "@strFormat = private unnamed_addr constant [15 x i8] c\"runtime error\n\00\", align 1",
     "declare i64 @printf(i8*, ...)",
     "",
+    "declare void @exit()",
     "define void @printInt(i64 %x) {",
-    "\tcall i64 (i8*, ...) @printf(i8* getelementptr([4 x i8], [4 x i8]* @format, i64 0, i64 0), i64 %x)",
+    "\tcall i64 (i8*, ...) @printf(i8* getelementptr([4 x i8], [4 x i8]* @intFormat, i64 0, i64 0), i64 %x)",
+    "\tret void",
+    "}",
+    "define void @printString(i8* %x) {",
+    "\tcall i64 (i8*, ...) @printf(i8* %x)",
+    "\tret void",
+    "}",
+    "define void @error() {",
+    "\t%msg = getelementptr inbounds [15 x i8], [15 x i8]* @strFormat, i32 0, i32 0",
+    "\tcall void @printString(i8* %msg)",
+    "\tcall void @exit()",
     "\tret void",
     "}",
     ""
@@ -324,10 +349,10 @@ execProgram (Program _ topdefs) = do
     execTopDef main
 
 newFunctionsMap :: FunMap
-newFunctionsMap = Map.insert "printBool" (MyVoid, [MyBool]) $
-                  Map.insert "printString" (MyVoid, [MyStr]) $
+newFunctionsMap = Map.insert "printString" (MyVoid, [MyStr]) $
                   Map.insert "printInt" (MyVoid, [MyInt]) $
-                  Map.insert "main" (MyInt, []) Map.empty
+                  Map.insert "error" (MyVoid, []) $
+                  Map.insert "main" (MyInt, []) Map.empty 
 
 newState :: MyState
 newState  = (Map.empty, newFunctionsMap, 1,  [])

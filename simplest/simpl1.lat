@@ -30,7 +30,11 @@ int main() {
     int y2 = y * 2 * x;
     printInt(x);
     printInt(y);
-    printInt(2);
+    printInt(y2);
+
+    boolean b1 = true;
+    boolean b2 = false;
+    boolean b3 = b1 && b2;
 
     return 0;
 }
