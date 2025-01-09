@@ -56,6 +56,11 @@ addInstr instr = do
 combineInstr :: [Instr] -> Instr
 combineInstr = intercalate "\n\t"
 
+addLabel :: String -> MyMonad ()
+addLabel str = do
+    let instr = "; <label>:" ++ str
+    (sts, funs, ref, res) <- get
+    put (sts, funs, ref, res ++ [instr])
 
 typeToPtr :: MyType -> MyType
 typeToPtr MyInt = MyPtr MyInt
@@ -159,12 +164,13 @@ evalOp e1 opStr e2 = do
 
 evalVarStr :: VarVal -> MyMonad String
 evalVarStr (VarInt x) = return $ show x
+evalVarStr (VarBool x) = return $ show x
 evalVarStr  (VarReg(r1, ref1, MyPtr typ)) = do
-    v1' <- unwrap (VarReg(r1, ref1, MyPtr typ))
+    v1' <- unwrap (VarReg (r1, ref1, MyPtr typ))
     r1' <- getValReg v1'
     return $ "%var" ++ show r1'
 evalVarStr  (VarReg(r1, ref1, typ)) = return $ "%var" ++ show r1
-evalVarStr _ = error "Unsupported type"
+evalVarStr x = error $ "Unsupported type" ++ show x
 
 getBaseType :: VarVal -> MyType
 getBaseType (VarInt x) = MyInt
@@ -276,7 +282,22 @@ exec (VRet line : xs) = do
     addInstr instr
     -- exec xs
 
--- exec (Cond line expr stmt : xs) = do
+exec (Cond line expr stmt : xs) = do
+    v <- eval expr
+    case v of
+        VarBool 0 -> exec xs
+        VarBool 1 -> exec $ stmt : xs
+        VarReg (reg, ref, _) -> do
+            let l1 = show reg ++ "1"
+            let l2 = show reg ++ "2"
+            let instr = "br i1 %var" ++ show reg ++ ", label %" ++ l1 ++ ", label %" ++ l2
+            addInstr instr
+            addLabel l1
+            exec [stmt]
+            addInstr $ "br label %" ++ l2
+            addLabel l2
+            exec xs
+        x -> error $ "unexpected type" ++ show x
 
 
 -- exec (CondElse _ expr stmt1 stmt2 : xs) = do
@@ -367,7 +388,7 @@ newFunctionsMap :: FunMap
 newFunctionsMap = Map.insert "printString" (MyVoid, [MyStr]) $
                   Map.insert "printInt" (MyVoid, [MyInt]) $
                   Map.insert "error" (MyVoid, []) $
-                  Map.insert "main" (MyInt, []) Map.empty 
+                  Map.insert "main" (MyInt, []) Map.empty
 
 newState :: MyState
 newState  = (Map.empty, newFunctionsMap, 1,  [])
