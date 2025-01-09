@@ -25,10 +25,8 @@
 int main() {
     int x = 2;
     x = 4;
-    int y = x + 1;
-	//int x = 10;
-    //int y = x;
-    //int z = y + 1;
+    int x2 = 2;
+    int y = 1 + x + x2 + 2;
     printInt(x);
     printInt(y);
 

@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 module LLVM where
 
 import Abs
@@ -99,6 +100,7 @@ addReg = do
 
 setVar :: VarName -> VarVal -> MyMonad ()
 setVar name val = do
+    trace (name ++ show val) $ return ()
     (reg, ref, typ) <- getVarReg name
     newRef <- nextReg
     let instr = case val of
@@ -144,11 +146,39 @@ funApply funName args = do
 unwrap :: VarVal -> MyMonad VarVal
 unwrap (VarReg (reg, ref, MyPtr typ)) = do
     newRef <- nextReg
+    addReg
     let instr = "%var" ++ show newRef ++ " = load " ++ show typ ++ ", " ++ show (MyPtr typ) ++ " %var" ++ show reg
     addInstr instr
-    addReg
     return (VarReg (newRef, 1, typ))
 unwrap x = return x
+
+evalOp :: Expr' BNFC'Position -> String -> Expr' BNFC'Position -> MyMonad VarVal
+evalOp e1 opStr e2 = do
+    v1 <- eval e1
+    v2 <- eval e2
+    evalOp' v1 opStr v2
+
+evalVarStr :: VarVal -> MyMonad String
+evalVarStr (VarInt x) = return $ show x
+evalVarStr  (VarReg(r1, ref1, MyInt)) = return $ "%var" ++ show r1
+evalVarStr  (VarReg(r1, ref1, MyPtr MyInt)) = do
+    v1' <- unwrap (VarReg(r1, ref1, MyPtr MyInt))
+    r1' <- getValReg v1'
+    return $ "%var" ++ show r1'
+evalVarStr _ = error "Unsupported type"
+
+evalOp' :: VarVal -> String -> VarVal -> MyMonad VarVal
+evalOp' v1 opStr v2 = do
+    case (v1, v2) of
+        (VarInt x, VarInt y) -> return (VarInt (x + y))
+        (_, _) -> do
+            newRef <- nextReg
+            addReg
+            s1 <- evalVarStr v1
+            s2 <- evalVarStr v2
+            let instr = "%var" ++ show newRef ++ " = " ++ opStr ++ " i64 " ++ s1 ++ ", " ++ s2
+            addInstr instr
+            return (VarReg (newRef, 1, MyInt))
 
 
 eval :: Expr -> MyMonad VarVal
@@ -169,25 +199,16 @@ eval (Not line e) = do
 eval (Neg line e) = do
     undefined
 eval (EMul line e1 op e2) = do
-    undefined
+    let opStr = case op of
+            Times _ -> "mul"
+            Div _ -> "sdiv"
+            Mod _ -> "srem"
+    evalOp e1 opStr e2
 eval (EAdd line e1 op e2) = do
     let opStr = case op of
             Plus _ -> "add"
             Minus _ -> "sub"
-    v1 <- eval e1
-    v2 <- eval e2
-    case (v1, v2) of
-        (VarInt x, VarInt y) -> return (VarInt (x + y))
-        (VarReg (r1, ref1, MyPtr MyInt), VarInt y) -> do
-            v1' <- unwrap v1
-            newRef <- nextReg
-            r1' <- getValReg v1'
-            let instr = "%var" ++ show newRef ++ " = " ++ opStr ++ " i64 " ++ show r1' ++ ", " ++ show y
-            addInstr instr
-            addReg
-            return (VarReg (newRef, 1, MyInt))
-        e -> error $ "Unsupported type" ++ show e
-
+    evalOp e1 opStr e2
 eval (ERel line e1 op e2) = do
     undefined
 eval (EAnd line e1 e2) = do
