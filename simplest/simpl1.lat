@@ -26,6 +26,9 @@ int main() {
     int x = 2;
     int y = 4;
     if (x < y) {
+        if (x < y) {
+            printInt(2);
+        }
         printInt(1);
     }
 
