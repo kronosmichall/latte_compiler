@@ -25,12 +25,12 @@
 int main() {
     int x = 2;
     int y = 4;
-    if (x < y) {
-        if (x < y) {
-            printInt(2);
-        }
+    if (1 < 2) {
+        printInt(2);
+    } else {
         printInt(1);
     }
+
 
     return 0;
 }

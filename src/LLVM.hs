@@ -301,8 +301,27 @@ exec (Cond line expr stmt : xs) = do
       exec xs
     x -> error $ "unexpected type" ++ show x
 
--- exec (CondElse _ expr stmt1 stmt2 : xs) = do
-
+exec (CondElse _ expr stmt1 stmt2 : xs) = do
+  v <- eval expr
+  case v of
+    VarBool 0 -> exec $ stmt2 : xs
+    VarBool 1 -> exec $ stmt1 : xs
+    VarReg (reg, ref, _) -> do
+      let l1 = show reg ++ "true"
+      let l2 = show reg ++ "false"
+      let l3 = show reg ++ "end"
+      let i1 = "br i1 %var" ++ show reg ++ ", label %" ++ l1 ++ ", label %" ++ l2
+      addInstr i1
+      addLabel l1
+      exec [stmt1]
+      addInstr $ "br label %" ++ l3
+      addLabel l2
+      exec [stmt2]
+      addInstr $ "br label %" ++ l3
+      addLabel l3
+      exec xs
+    x -> error $ "unexpected type" ++ show x
+    
 -- exec (While line expr stmt : xs) =
 exec (SExp _ expr : xs) = do
   tmp <- eval expr
