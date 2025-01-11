@@ -189,7 +189,7 @@ getBaseType (VarReg (_, _, typ)) = typ
 evalOp'' :: VarVal -> String -> VarVal -> MyType -> MyMonad VarVal
 evalOp'' v1 opStr v2 typ = do
   case (v1, v2) of
-    (VarInt x, VarInt y) -> return (VarInt (x + y))
+    -- (VarInt x, VarInt y) -> return (VarInt (x + y))
     (_, _) -> do
       newRef <- nextReg
       addReg
@@ -300,7 +300,6 @@ exec (Cond line expr stmt : xs) = do
       addLabel l2
       exec xs
     x -> error $ "unexpected type" ++ show x
-
 exec (CondElse _ expr stmt1 stmt2 : xs) = do
   v <- eval expr
   case v of
@@ -321,7 +320,7 @@ exec (CondElse _ expr stmt1 stmt2 : xs) = do
       addLabel l3
       exec xs
     x -> error $ "unexpected type" ++ show x
-    
+
 -- exec (While line expr stmt : xs) =
 exec (SExp _ expr : xs) = do
   tmp <- eval expr
