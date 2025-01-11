@@ -23,14 +23,8 @@
 //}
 
 int main() {
-    int x = 2;
-    int y = 4;
-    if (1 < 2) {
-        printInt(2);
-    } else {
-        printInt(1);
-    }
-
+    string s;
+    s= "abcd";
 
     return 0;
 }

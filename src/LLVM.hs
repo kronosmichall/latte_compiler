@@ -4,7 +4,7 @@ module LLVM where
 
 import Abs
 import Control.Monad.State
-import Data.List (intercalate, stripPrefix)
+import Data.List (intercalate, isInfixOf, nub, stripPrefix)
 import Data.List.Split (splitOn)
 import Data.Map hiding (foldl, map)
 import qualified Data.Map as Map hiding (foldl, map)
@@ -57,7 +57,8 @@ typeToMy (Void _) = MyVoid
 addInstr :: Instr -> MyMonad ()
 addInstr instr = do
   (sts, funs, ref, res) <- get
-  put (sts, funs, ref, res ++ ["\t" ++ instr])
+  let instr2 = if length (lines instr) == 1 then ["\t" ++ instr] else map ("\t" ++) $ lines instr
+  put (sts, funs, ref, res ++ instr2)
 
 combineInstr :: [Instr] -> Instr
 combineInstr = intercalate "\n\t"
@@ -78,7 +79,9 @@ createVar :: VarName -> MyType -> MyMonad ()
 createVar name typ = do
   (sts, funs, ref, res) <- get
   let val = (ref, 1, typeToPtr typ)
-  let instr = "%var" ++ show ref ++ " = alloca " ++ show typ
+  let instr =
+        "%var" ++ show ref ++ " = alloca " ++ show typ
+
   put (Map.insert name val sts, funs, ref + 1, res)
   addInstr instr
 
@@ -97,8 +100,7 @@ getValReg _ = error "Not a register"
 -- setVar name val = do
 
 newVarNoInit :: MyType -> VarName -> MyMonad ()
-newVarNoInit typ name = do
-  createVar name typ
+newVarNoInit typ name = createVar name typ
 
 nextReg :: MyMonad Register
 nextReg = do
@@ -117,11 +119,12 @@ setVar name val = do
   let instr = case val of
         VarInt x -> "store i64 " ++ show x ++ ", " ++ show typ ++ " %var" ++ show reg
         VarBool x -> "store i1 " ++ show x ++ ", " ++ show typ ++ " %var" ++ show reg
-        VarString x -> undefined
+        VarString x -> error "Strings should always be references"
         VarReg (reg2, ref2, MyPtr typ2) -> do
           let i1 = "%var" ++ show newRef ++ " = load " ++ show typ2 ++ ", " ++ show (MyPtr typ2) ++ " %var" ++ show reg2
           let i2 = "store " ++ show typ2 ++ " %var" ++ show newRef ++ ", " ++ show typ ++ " %var" ++ show reg
           combineInstr [i1, i2]
+        VarReg (reg2, ref2, MyStr) -> "store i8* %var" ++ show newRef ++ ", " ++ show (MyPtr typ) ++ " %var" ++ show reg2
         VarReg (reg2, ref2, typ2) -> "store " ++ show typ2 ++ " %var" ++ show reg2 ++ ", " ++ show typ ++ " %var" ++ show reg
         _ -> error "Unsupported type"
   addInstr instr
@@ -187,23 +190,33 @@ getBaseType (VarReg (_, _, MyPtr typ)) = typ
 getBaseType (VarReg (_, _, typ)) = typ
 
 evalOp'' :: VarVal -> String -> VarVal -> MyType -> MyMonad VarVal
-evalOp'' v1 opStr v2 typ = do
-  case (v1, v2) of
-    -- (VarInt x, VarInt y) -> return (VarInt (x + y))
-    (_, _) -> do
-      newRef <- nextReg
-      addReg
-      s1 <- evalVarStr v1
-      s2 <- evalVarStr v2
-      let typ2 = getBaseType v1
-      let instr = "%var" ++ show newRef ++ " = " ++ opStr ++ " " ++ show typ2 ++ " " ++ s1 ++ ", " ++ s2
-      addInstr instr
-      return (VarReg (newRef, 1, typ))
+evalOp'' v1 opStr v2 typ = case (v1, v2) of
+  -- (VarInt x, VarInt y) -> return (VarInt (x + y))
+  (_, _) -> do
+    newRef <- nextReg
+    addReg
+    s1 <- evalVarStr v1
+    s2 <- evalVarStr v2
+    let typ2 = getBaseType v1
+    let instr = "%var" ++ show newRef ++ " = " ++ opStr ++ " " ++ show typ2 ++ " " ++ s1 ++ ", " ++ s2
+    addInstr instr
+    return (VarReg (newRef, 1, typ))
 
 evalOp' :: VarVal -> String -> VarVal -> MyMonad VarVal
 evalOp' v1 opStr v2 = do
   let typ = getBaseType v1
   evalOp'' v1 opStr v2 typ
+
+evalStr :: String -> MyMonad VarVal
+evalStr str = do
+  let len = length str + 1
+  let strTyp = "[" ++ show len ++ " x i8]"
+  ref <- nextReg
+  let i1 = "%var" ++ show ref ++ " = call i8* @calloc(i64 " ++ show len ++ ", i64 1)"
+  let i2 = "call void @memcpy(i8* %var" ++ show ref ++ ", i8* getelementptr inbounds (" ++ strTyp ++ ", " ++ strTyp ++ "* " ++ show str ++ ", i64 0, i64 0), i64 " ++ show len ++ ")"
+  addInstr $ combineInstr [i1, i2]
+  addReg
+  return $ VarReg (ref, 1, MyStr)
 
 eval :: Expr -> MyMonad VarVal
 eval (EVar line (Ident name)) = do
@@ -216,8 +229,7 @@ eval (EApp line (Ident name) exprs) = do
   args <- mapM eval exprs
   args2 <- mapM unwrap args
   funApply name args2
-eval (EString _ _) = do
-  undefined
+eval (EString _ str) = evalStr str
 eval (Not line e) = do
   v <- eval e
   let v2 = VarBool 1
@@ -325,8 +337,7 @@ exec (CondElse _ expr stmt1 stmt2 : xs) = do
 exec (SExp _ expr : xs) = do
   tmp <- eval expr
   exec xs
-exec other = do
-  trace ("myFunction called with " ++ show other) undefined
+exec other = trace ("myFunction called with " ++ show other) undefined
 
 header :: String
 header =
@@ -334,6 +345,10 @@ header =
     [ "@intFormat = internal constant [4 x i8] c\"%d\\0A\\00\""
     , "@strFormat = private unnamed_addr constant [14 x i8] c\"runtime error\00\", align 1"
     , "declare i64 @printf(i8*, ...)"
+    , "declare i8* @malloc(i64)"
+    , "declare i8* @realloc(i8*, i64)"
+    , "declare i8* @calloc(i64, i64)"
+    , "declare void @memcpy(i8*, i8*, i64)"
     , ""
     , "declare void @exit()"
     , "define void @printInt(i64 %x) {"
@@ -345,7 +360,7 @@ header =
     , "\tret void"
     , "}"
     , "define void @error() {"
-    , "\t%msg = getelementptr inbounds [14 x i8], [14 x i8]* @strFormat, i32 0, i32 0"
+    , "\t%msg = getelementptr inbounds [14 x i8], [14 x i8]* @strFormat, i64 0, i64 0"
     , "\tcall void @printString(i8* %msg)"
     , "\tcall void @exit()"
     , "\tret void"
@@ -403,6 +418,9 @@ execProgram (Program _ topdefs) = do
   execTopDef main
   labelMap <- getLabelRemap
   remapLabels labelMap
+  strMapping <- getStrMapping
+  addConstLiterals strMapping
+  replaceLiterals strMapping
 
 newFunctionsMap :: FunMap
 newFunctionsMap =
@@ -427,14 +445,13 @@ remapLabels :: Map String Integer -> MyMonad ()
 remapLabels labelMap = do
   let newRes = []
   (sts, funs, ref, res) <- get
-  res2 <- mapM (\instr -> mapInstr instr labelMap) res
+  res2 <- mapM (`mapInstr` labelMap) res
   put (sts, funs, ref, res2)
 
 mapLabel :: Instr -> Map String Integer -> MyMonad String
-mapLabel instr mapp = do
-  case Map.lookup instr mapp of
-    Just val -> return $ show val
-    Nothing -> return instr
+mapLabel instr mapp = case Map.lookup instr mapp of
+  Just val -> return $ show val
+  Nothing -> return instr
 
 safeAt :: [String] -> Int -> String
 safeAt list i =
@@ -468,6 +485,60 @@ mapInstr instr mapp = do
           let p2 = split1 !! 1
           p2mapped <- mapLabel p2 mapp
           return $ p1 ++ p2mapped
+
+findMemCpy :: [Instr] -> [Instr]
+findMemCpy = Prelude.filter (\i -> "call void @memcpy" `isInfixOf` i)
+
+getStrMapping :: MyMonad  (Map String Integer)
+getStrMapping = do
+  (sts, funs, ref, res) <- get
+  let literals = findMemCpy res
+  let uniqliterals = nub literals
+  let mapp = Map.fromList $ zip uniqliterals [1 ..]
+  return mapp
+
+addConstLiterals :: Map String Integer -> MyMonad ()
+addConstLiterals mapp = do
+  let pairs = Map.toList mapp
+  instrs <- mapM addConstLiteral pairs
+  (sts, funs, ref, res) <- get
+  put (sts, funs, ref, instrs ++ res)
+
+getLiteral :: String -> String
+getLiteral str = do
+  let split1 = splitOn "i8]* \"" str
+  let split2 = splitOn "\"," (split1 !! 1)
+  head split2
+
+addConstLiteral :: (String, Integer) -> MyMonad String
+addConstLiteral (str, num) = do
+  let literal = getLiteral str
+  let instr = "@.str" ++ show num ++ " = private constant [" ++ show (length literal + 1) ++ " x i8] c\"" ++ literal ++ "\\00\""
+  return instr
+
+replaceLiterals :: Map String Integer -> MyMonad ()
+replaceLiterals mapp = do
+  (sts, funs, ref, res) <- get
+  instrs2 <- mapM (`replaceLiteral` mapp) res
+  put (sts, funs, ref, instrs2)
+
+replaceLiteral :: Instr -> Map String Integer -> MyMonad Instr
+replaceLiteral instr mapp = do
+  let isMemCpy = "call void @memcpy" `isInfixOf` instr
+  if isMemCpy then do
+    let split1 = splitOn "i8]* \"" instr
+    let p1 = head split1 ++ "i8]* "
+    let split2 = split1 !! 1
+    let split3 = splitOn "\", " split2
+    let p2 = head split3
+    let p2mapped = case Map.lookup instr mapp of
+          Just val -> "@.str" ++ show val
+          Nothing -> error $ "String not found: " ++ instr ++" in " ++ show mapp
+    let p3 = ", " ++ split3 !! 1
+    return $ p1 ++ p2mapped ++ p3
+  else do
+    return instr
+
 
 comp :: Program -> String
 comp prog = do
