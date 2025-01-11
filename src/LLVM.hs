@@ -1,4 +1,6 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 module LLVM where
 
@@ -61,7 +63,7 @@ addInstr instr = do
   put (sts, funs, ref, res ++ instr2)
 
 combineInstr :: [Instr] -> Instr
-combineInstr = intercalate "\n\t"
+combineInstr = intercalate "\n"
 
 addLabel :: String -> MyMonad ()
 addLabel str = do
@@ -71,7 +73,7 @@ addLabel str = do
 
 typeToPtr :: MyType -> MyType
 typeToPtr MyInt = MyPtr MyInt
-typeToPtr MyStr = MyStr
+typeToPtr MyStr = MyPtr MyStr
 typeToPtr MyBool = MyPtr MyBool
 typeToPtr e = error $ "Unsupported type" ++ show e
 
@@ -124,7 +126,7 @@ setVar name val = do
           let i1 = "%var" ++ show newRef ++ " = load " ++ show typ2 ++ ", " ++ show (MyPtr typ2) ++ " %var" ++ show reg2
           let i2 = "store " ++ show typ2 ++ " %var" ++ show newRef ++ ", " ++ show typ ++ " %var" ++ show reg
           combineInstr [i1, i2]
-        VarReg (reg2, ref2, MyStr) -> "store i8* %var" ++ show newRef ++ ", " ++ show (MyPtr typ) ++ " %var" ++ show reg2
+        VarReg (reg2, ref2, MyStr) -> "store i8* %var" ++ show reg2 ++ ", " ++ show typ ++ " %var" ++ show reg
         VarReg (reg2, ref2, typ2) -> "store " ++ show typ2 ++ " %var" ++ show reg2 ++ ", " ++ show typ ++ " %var" ++ show reg
         _ -> error "Unsupported type"
   addInstr instr
@@ -443,7 +445,6 @@ getLabelRemap = do
 
 remapLabels :: Map String Integer -> MyMonad ()
 remapLabels labelMap = do
-  let newRes = []
   (sts, funs, ref, res) <- get
   res2 <- mapM (`mapInstr` labelMap) res
   put (sts, funs, ref, res2)

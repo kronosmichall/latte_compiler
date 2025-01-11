@@ -24,7 +24,8 @@
 
 int main() {
     string s;
-    s= "abcd";
+    s = "abcd";
+    printString(s);
 
     return 0;
 }
