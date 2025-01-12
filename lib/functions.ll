@@ -62,18 +62,3 @@ define i64 @strlen(i8* %str) {
   %final_index = load i64, i64* %counter
   ret i64 %final_index
 }
-@.str1 = private constant [5 x i8] c"aba \00"
-@.str2 = private constant [7 x i8] c"cadaba\00"
-define i64 @main() {
-	%var1 = alloca i8*
-	%var2 = call i8* @calloc(i64 5, i64 1)
-	call void @memcpy(i8* %var2, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str1, i64 0, i64 0), i64 5)
-	%var3 = call i8* @calloc(i64 7, i64 1)
-	call void @memcpy(i8* %var3, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str2, i64 0, i64 0), i64 7)
-	%var4 = call i8* @concat_strings(i8* %var2, i8* %var3)
-	store i8* %var4, i8** %var1
-	%var5 = load i8*, i8** %var1
-	call void @printString(i8* %var5)
-	ret i64 0
-}
-

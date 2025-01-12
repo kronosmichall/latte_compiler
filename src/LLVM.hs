@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
 
 module LLVM where
 
@@ -172,7 +172,21 @@ evalOp :: Expr' BNFC'Position -> String -> Expr' BNFC'Position -> MyMonad VarVal
 evalOp e1 opStr e2 = do
   v1 <- eval e1
   v2 <- eval e2
-  evalOp' v1 opStr v2
+  case (getBaseType v1, getBaseType v2) of
+    (MyStr, MyStr) -> evalAddStr v1 v2
+    _ -> evalOp' v1 opStr v2
+
+evalAddStr :: VarVal -> VarVal -> MyMonad VarVal
+evalAddStr v1 v2 = do
+  v11 <- unwrap v1
+  v22 <- unwrap v2
+  r11 <- getValReg v11
+  r22 <- getValReg v22
+  newRef <- nextReg
+  addReg
+  let instr = "%var" ++ show newRef ++ " = call i8* @concat_strings(i8* %var" ++ show r11 ++ ", i8* %var" ++ show r22 ++ ")"
+  addInstr instr
+  return $ VarReg (newRef, 1, MyStr)
 
 evalVarStr :: VarVal -> MyMonad String
 evalVarStr (VarInt x) = return $ show x
@@ -341,35 +355,6 @@ exec (SExp _ expr : xs) = do
   exec xs
 exec other = trace ("myFunction called with " ++ show other) undefined
 
-header :: String
-header =
-  unlines
-    [ "@intFormat = internal constant [4 x i8] c\"%d\\0A\\00\""
-    , "@strFormat = private unnamed_addr constant [14 x i8] c\"runtime error\00\", align 1"
-    , "declare i64 @printf(i8*, ...)"
-    , "declare i8* @malloc(i64)"
-    , "declare i8* @realloc(i8*, i64)"
-    , "declare i8* @calloc(i64, i64)"
-    , "declare void @memcpy(i8*, i8*, i64)"
-    , ""
-    , "declare void @exit()"
-    , "define void @printInt(i64 %x) {"
-    , "\tcall i64 (i8*, ...) @printf(i8* getelementptr([4 x i8], [4 x i8]* @intFormat, i64 0, i64 0), i64 %x)"
-    , "\tret void"
-    , "}"
-    , "define void @printString(i8* %x) {"
-    , "\tcall i64 (i8*, ...) @printf(i8* %x)"
-    , "\tret void"
-    , "}"
-    , "define void @error() {"
-    , "\t%msg = getelementptr inbounds [14 x i8], [14 x i8]* @strFormat, i64 0, i64 0"
-    , "\tcall void @printString(i8* %msg)"
-    , "\tcall void @exit()"
-    , "\tret void"
-    , "}"
-    , ""
-    ]
-
 findMain :: [TopDef] -> TopDef
 findMain topdefs =
   head (Prelude.filter isMain topdefs)
@@ -490,7 +475,7 @@ mapInstr instr mapp = do
 findMemCpy :: [Instr] -> [Instr]
 findMemCpy = Prelude.filter (\i -> "call void @memcpy" `isInfixOf` i)
 
-getStrMapping :: MyMonad  (Map String Integer)
+getStrMapping :: MyMonad (Map String Integer)
 getStrMapping = do
   (sts, funs, ref, res) <- get
   let literals = findMemCpy res
@@ -526,26 +511,26 @@ replaceLiterals mapp = do
 replaceLiteral :: Instr -> Map String Integer -> MyMonad Instr
 replaceLiteral instr mapp = do
   let isMemCpy = "call void @memcpy" `isInfixOf` instr
-  if isMemCpy then do
-    let split1 = splitOn "i8]* \"" instr
-    let p1 = head split1 ++ "i8]* "
-    let split2 = split1 !! 1
-    let split3 = splitOn "\", " split2
-    let p2 = head split3
-    let p2mapped = case Map.lookup instr mapp of
-          Just val -> "@.str" ++ show val
-          Nothing -> error $ "String not found: " ++ instr ++" in " ++ show mapp
-    let p3 = ", " ++ split3 !! 1
-    return $ p1 ++ p2mapped ++ p3
-  else do
-    return instr
-
+  if isMemCpy
+    then do
+      let split1 = splitOn "i8]* \"" instr
+      let p1 = head split1 ++ "i8]* "
+      let split2 = split1 !! 1
+      let split3 = splitOn "\", " split2
+      let p2 = head split3
+      let p2mapped = case Map.lookup instr mapp of
+            Just val -> "@.str" ++ show val
+            Nothing -> error $ "String not found: " ++ instr ++ " in " ++ show mapp
+      let p3 = ", " ++ split3 !! 1
+      return $ p1 ++ p2mapped ++ p3
+    else do
+      return instr
 
 comp :: Program -> String
 comp prog = do
   let func = runState (execProgram prog)
   let ((), (_, _, _, res)) = func newState
-  unlines $ header : res
+  unlines res
 
 showSts :: MyMonad ()
 showSts = do

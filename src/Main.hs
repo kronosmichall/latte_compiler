@@ -34,12 +34,14 @@ main = do
     let filePath = head args
     codeStr <- readFile filePath
     let program = getProgram codeStr
+    functions <- readFile "lib/functions.ll"
     -- TypeChecker.comp program
     let llFilename = replaceExtension filePath ".ll"
     let bcFilename = replaceExtension filePath ".bc"
-    writeFile llFilename $  LLVM.comp program
+    let programStr = functions ++ LLVM.comp program
+    writeFile llFilename programStr
     callCommand $ "llvm-as " ++ llFilename ++ " -o " ++ bcFilename
-    
+
     -- let filename = takeFileName filePath
     -- let jasminFilename = replaceExtension filePath ".j"
     -- let fileDir = takeDirectory filePath
