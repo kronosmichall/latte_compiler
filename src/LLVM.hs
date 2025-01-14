@@ -72,10 +72,7 @@ addLabel str = do
   put (sts, funs, ref, res ++ [instr])
 
 typeToPtr :: MyType -> MyType
-typeToPtr MyInt = MyPtr MyInt
-typeToPtr MyStr = MyPtr MyStr
-typeToPtr MyBool = MyPtr MyBool
-typeToPtr e = error $ "Unsupported type" ++ show e
+typeToPtr x = MyPtr x
 
 createVar :: VarName -> MyType -> MyMonad ()
 createVar name typ = do
@@ -147,7 +144,8 @@ funApply funName args = do
   let (typ, argTypes) = case Map.lookup funName funs of
         Just val' -> val'
         Nothing -> error $ "Function " ++ funName ++ " not found"
-  let args2 = mapM show args
+  let args2 :: [String]
+      args2 = map show args
 
   if typ == MyVoid
     then do
@@ -365,12 +363,18 @@ findMain topdefs =
 topDefHeader :: TopDef -> String
 topDefHeader (FnDef _ typ (Ident name) args _) = "define " ++ show (typeToMy typ) ++ " @" ++ name ++ "(" ++ intercalate ", " (map (\(Arg _ typ (Ident name)) -> show (typeToMy typ) ++ " %" ++ name) args) ++ ") {"
 
--- initArg :: Arg -> MyMonad ()
--- initArg (Arg _ _ (Ident name)) = do
---     modify (\(sts, funs,  ref,  res) -> (Map.insert name (ref, 1) sts, funs, ref + 1,  res))
+initArg :: Arg -> MyMonad ()
+initArg (Arg _ typ (Ident name)) = do
+  let oldTyp = typeToMy typ
+  let newTyp = typeToPtr oldTyp
+  newVarNoInit newTyp name
+  (sts, funs, ref, res) <- get
+  let instr = "set %" ++ show oldTyp ++ " " ++ name ++ ", " ++ show newTyp ++ " %var" ++ show ref
+  addInstr instr
 
--- initArgs :: [Arg] -> MyMonad ()
--- initArgs = mapM_ initArg
+-- modify (\(sts, funs,  ref,  res) -> (Map.insert name (ref, 1) sts, funs, ref + 1,  res))
+initArgs :: [Arg] -> MyMonad ()
+initArgs = mapM_ initArg
 
 execTopDef :: TopDef -> MyMonad ()
 execTopDef topdef = do
@@ -380,7 +384,7 @@ execTopDef topdef = do
   put (sts, funs, ref, res ++ [funHeader])
   case topdef of
     (FnDef line ret name args (Block _ stmts)) -> do
-      -- initArgs args
+      initArgs args
       exec stmts
 
   (sts', funs', ref', res') <- get
