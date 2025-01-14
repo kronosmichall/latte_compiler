@@ -4,3 +4,4 @@ lattests/
 .vscode/
 build/
 latc
+checker

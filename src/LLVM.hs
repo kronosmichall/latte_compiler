@@ -296,10 +296,16 @@ exec (Ass line (Ident name) expr : xs) = do
   v <- eval expr
   setVar name v
   exec xs
-
--- exec (Incr line (Ident name) : xs) = do
-
--- exec (Decr line  ident : xs) =
+exec (Incr line (Ident name) : xs) = do
+  let e1 = EVar line (Ident name)
+  let e2 = ELitInt line 1
+  let expr = EAdd line e1 (Plus line) e2
+  exec (Ass line (Ident name) expr : xs)
+exec (Decr line (Ident name) : xs) = do
+  let e1 = EVar line (Ident name)
+  let e2 = ELitInt line 1
+  let expr = EAdd line e1 (Minus line) e2
+  exec (Ass line (Ident name) expr : xs)
 exec (Ret line expr : xs) = do
   exec xs
   v <- eval expr
@@ -347,12 +353,36 @@ exec (CondElse _ expr stmt1 stmt2 : xs) = do
       addLabel l3
       exec xs
     x -> error $ "unexpected type" ++ show x
-
--- exec (While line expr stmt : xs) =
+exec (While line expr stmt : xs) = do
+  let l0 = show line ++ "while"
+  let i0 = "br label %" ++ l0
+  addInstr i0
+  addLabel l0
+  v <- eval expr
+  case v of
+    VarBool 0 -> exec xs
+    VarBool 1 -> do
+      let l1 = show line ++ "true"
+      let i1 = "br label %" ++ l1
+      addInstr i1
+      addLabel l1
+      exec [stmt]
+      let instr = "br label %" ++ l1
+      addInstr instr
+    VarReg (reg, ref, _) -> do
+      let l1 = show reg ++ "true"
+      let l2 = show reg ++ "false"
+      let instr = "br i1 %var" ++ show reg ++ ", label %" ++ l1 ++ ", label %" ++ l2
+      addInstr instr
+      addLabel l1
+      exec [stmt]
+      addInstr $ "br label %" ++ l0
+      addLabel l2
+      exec xs
+    x -> error $ "unexpected type" ++ show x
 exec (SExp _ expr : xs) = do
   tmp <- eval expr
   exec xs
-exec other = trace ("myFunction called with " ++ show other) undefined
 
 findMain :: [TopDef] -> TopDef
 findMain topdefs =
