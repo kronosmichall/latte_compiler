@@ -303,7 +303,8 @@ exec (Ass line (Ident name) expr : xs) = do
 exec (Ret line expr : xs) = do
   exec xs
   v <- eval expr
-  let instr = "ret " ++ show v
+  v1 <- unwrap v
+  let instr = "ret " ++ show v1
   addInstr instr
 exec (VRet line : xs) = do
   let instr = "ret"
@@ -367,9 +368,9 @@ initArg :: Arg -> MyMonad ()
 initArg (Arg _ typ (Ident name)) = do
   let oldTyp = typeToMy typ
   let newTyp = typeToPtr oldTyp
-  newVarNoInit newTyp name
+  newVarNoInit oldTyp name
   (sts, funs, ref, res) <- get
-  let instr = "set %" ++ show oldTyp ++ " " ++ name ++ ", " ++ show newTyp ++ " %var" ++ show ref
+  let instr = "store " ++ show oldTyp ++ " %" ++ name ++ ", " ++ show newTyp ++ " %var" ++ show (ref - 1)
   addInstr instr
 
 -- modify (\(sts, funs,  ref,  res) -> (Map.insert name (ref, 1) sts, funs, ref + 1,  res))
