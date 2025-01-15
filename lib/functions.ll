@@ -2,6 +2,7 @@
 @strFormat = private unnamed_addr constant [14 x i8] c"runtime error\00", align 1
 
 declare i64 @printf(i8*, ...)
+declare i64 @scanf(i8*, ...)
 declare i8* @malloc(i64)
 declare i8* @realloc(i8*, i64)
 declare i8* @calloc(i64, i64)
@@ -16,6 +17,13 @@ define void @printInt(i64 %x) {
 define void @printString(i8* %x) {
     call i64 (i8*, ...) @printf(i8* %x)
     ret void
+}
+
+define i64 @readInt() {
+  %res = alloca i64
+  %scan_res = call i64 (i8*, ...) @scanf(i8* getelementptr([4 x i8], [4 x i8]* @intFormat, i64 0, i64 0), i64* %res)
+  %res2 = load i64, i64* %res
+  ret i64 %res2
 }
 
 define void @error() {

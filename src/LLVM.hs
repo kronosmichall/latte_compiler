@@ -448,8 +448,10 @@ newFunctionsMap :: FunMap
 newFunctionsMap =
   Map.insert "printString" (MyVoid, [MyStr]) $
     Map.insert "printInt" (MyVoid, [MyInt]) $
-      Map.insert "error" (MyVoid, []) $
-        Map.insert "main" (MyInt, []) Map.empty
+      Map.insert "readInt" (MyInt, []) $
+        Map.insert "readString" (MyStr, []) $
+          Map.insert "error" (MyVoid, []) $
+            Map.insert "main" (MyInt, []) Map.empty
 
 newState :: MyState
 newState = (Map.empty, newFunctionsMap, 1, [])
