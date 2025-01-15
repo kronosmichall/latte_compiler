@@ -232,6 +232,7 @@ evalStr str = do
   addReg
   return $ VarReg (ref, 1, MyStr)
 
+
 eval :: Expr -> MyMonad VarVal
 eval (EVar line (Ident name)) = do
   reg <- getVarReg name
@@ -251,7 +252,7 @@ eval (Not line e) = do
 eval (Neg line e) = do
   v1 <- eval e
   let v2 = VarInt (-1)
-  evalOp' v1 "add" v2
+  evalOp' v1 "mul" v2
 eval (EMul line e1 op e2) = do
   let opStr = case op of
         Times _ -> "mul"
@@ -280,6 +281,8 @@ eval (EAnd line e1 e2) = do
 eval (EOr line e1 e2) = do
   let opStr = "or"
   evalOp e1 opStr e2
+
+
 exec :: [Stmt] -> MyMonad ()
 exec [] = return ()
 exec (Empty _ : xs) = exec xs
@@ -307,15 +310,15 @@ exec (Decr line (Ident name) : xs) = do
   let expr = EAdd line e1 (Minus line) e2
   exec (Ass line (Ident name) expr : xs)
 exec (Ret line expr : xs) = do
-  exec xs
   v <- eval expr
   v1 <- unwrap v
   let instr = "ret " ++ show v1
   addInstr instr
+  -- exec xs
 exec (VRet line : xs) = do
-  let instr = "ret"
+  let instr = "ret void"
   addInstr instr
--- exec xs
+  -- exec xs
 
 exec (Cond line expr stmt : xs) = do
   v <- eval expr
@@ -410,7 +413,6 @@ initArgs = mapM_ initArg
 execTopDef :: TopDef -> MyMonad ()
 execTopDef topdef = do
   let funHeader = topDefHeader topdef
-  trace funHeader $ return ()
   (sts, funs, ref, res) <- get
   put (sts, funs, ref, res ++ [funHeader])
   case topdef of
@@ -420,6 +422,7 @@ execTopDef topdef = do
 
   (sts', funs', ref', res') <- get
   put (sts, funs', ref, res' ++ ["}", ""])
+  addInstr "; topdef-end"
 
 initTopDef :: TopDef -> MyMonad ()
 initTopDef (FnDef pos typ (Ident name) args block) = do
@@ -438,8 +441,13 @@ execProgram (Program _ topdefs) = do
   forM_ funs execTopDef
   let main = findMain topdefs
   execTopDef main
-  labelMap <- getLabelRemap
-  remapLabels labelMap
+  (sts, fns, refs, res) <- get
+  let blocks = splitOn "; topdef-end" (unlines res)
+  let blocks2 = map lines blocks
+  let remappedBlocks = map (\b -> remapLabels (getLabelRemap b) b) blocks2
+  let res2 = concat remappedBlocks
+  let res3 = fixRets res2
+  put (sts, fns, refs, res3)
   strMapping <- getStrMapping
   addConstLiterals strMapping
   replaceLiterals strMapping
@@ -456,25 +464,21 @@ newFunctionsMap =
 newState :: MyState
 newState = (Map.empty, newFunctionsMap, 1, [])
 
-getLabelRemap :: MyMonad (Map String Integer)
-getLabelRemap = do
-  (sts, funs, ref, res) <- get
+getLabelRemap :: [Instr] -> Map String Integer
+getLabelRemap res = do
   let prefix = "; <label>:"
   let labels = Prelude.map (stripPrefix prefix) res
   let labels2 = map (\(Just s) -> s) $ Prelude.filter (/= Nothing) labels
   let mapp = Map.fromList $ zip labels2 [1 ..]
-  return mapp
+  mapp
 
-remapLabels :: Map String Integer -> MyMonad ()
-remapLabels labelMap = do
-  (sts, funs, ref, res) <- get
-  res2 <- mapM (`mapInstr` labelMap) res
-  put (sts, funs, ref, res2)
+remapLabels :: Map String Integer -> [Instr] -> [Instr]
+remapLabels labelMap res = map (`mapInstr` labelMap) res
 
-mapLabel :: Instr -> Map String Integer -> MyMonad String
+mapLabel :: Instr -> Map String Integer -> String
 mapLabel instr mapp = case Map.lookup instr mapp of
-  Just val -> return $ show val
-  Nothing -> return instr
+  Just val -> show val
+  Nothing -> instr
 
 safeAt :: [String] -> Int -> String
 safeAt list i =
@@ -482,35 +486,45 @@ safeAt list i =
     then ""
     else list !! i
 
-mapInstr :: Instr -> Map String Integer -> MyMonad Instr
+mapInstr :: Instr -> Map String Integer -> Instr
 mapInstr instr mapp = do
   let br = stripPrefix "\tbr" instr
   let label = stripPrefix "; <label>:" instr
   if isNothing br && isNothing label
-    then return instr
+    then instr
     else
       if isNothing label
         then do
           let split1 = splitOn "label %" instr
           let p1 = head split1 ++ "label %"
           let p2 = head $ splitOn ", " (split1 !! 1)
-          p2mapped <- mapLabel p2 mapp
+          let p2mapped = mapLabel p2 mapp
           if length split1 == 2
-            then return $ p1 ++ p2mapped
+            then p1 ++ p2mapped
             else do
               let p3 = ", label %"
               let p4 = safeAt split1 2
-              p4mapped <- mapLabel p4 mapp
-              return $ p1 ++ p2mapped ++ p3 ++ p4mapped
+              let p4mapped = mapLabel p4 mapp
+              p1 ++ p2mapped ++ p3 ++ p4mapped
         else do
           let split1 = splitOn "; <label>:" instr
           let p1 = "; <label>:"
           let p2 = split1 !! 1
-          p2mapped <- mapLabel p2 mapp
-          return $ p1 ++ p2mapped
+          let p2mapped = mapLabel p2 mapp
+          p1 ++ p2mapped
 
 findMemCpy :: [Instr] -> [Instr]
 findMemCpy = Prelude.filter (\i -> "call void @memcpy" `isInfixOf` i)
+
+fixRets :: [Instr] -> [Instr]
+fixRets [] = []
+fixRets [x] = [x]
+fixRets (x:y:xs) = do
+  let isRet = "\tret " `isInfixOf` x
+  let isBr = "\tbr " `isInfixOf` y
+  if isRet && isBr
+    then x : fixRets xs
+    else x : fixRets (y : xs)
 
 getStrMapping :: MyMonad (Map String Integer)
 getStrMapping = do

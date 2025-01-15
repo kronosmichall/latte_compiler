@@ -23,9 +23,18 @@
 //}
 
 int main() {
-    string s;
-    s = "aba " + "cadaba";
-    printString(s);
-    return 0;
+  int x;
+  x = readInt();
+  printInt(x);
+  if (x > 5) {
+
+      printString("0");
+    } else {
+        printString("not 0");
+      }
+  int y = 100 - x;
+  printInt(y);
+  return 0;
 }
+
 

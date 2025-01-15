@@ -1,7 +1,8 @@
-@intFormat = internal constant [4 x i8] c"%d\0A\00"
+@intFormat = internal constant [6 x i8] c"%lld\0A\00"
 @strFormat = private unnamed_addr constant [14 x i8] c"runtime error\00", align 1
 
 declare i64 @printf(i8*, ...)
+declare i64 @scanf(i8*, ...)
 declare i8* @malloc(i64)
 declare i8* @realloc(i8*, i64)
 declare i8* @calloc(i64, i64)
@@ -10,12 +11,19 @@ declare void @memcpy(i8*, i8*, i64)
 declare void @exit()
 
 define void @printInt(i64 %x) {
-    call i64 (i8*, ...) @printf(i8* getelementptr([4 x i8], [4 x i8]* @intFormat, i64 0, i64 0), i64 %x)
+    call i64 (i8*, ...) @printf(i8* getelementptr([6 x i8], [6 x i8]* @intFormat, i64 0, i64 0), i64 %x)
     ret void
 }
 define void @printString(i8* %x) {
     call i64 (i8*, ...) @printf(i8* %x)
     ret void
+}
+
+define i64 @readInt() {
+  %res = alloca i64
+  %scan_res = call i64 (i8*, ...) @scanf(i8* getelementptr([6 x i8], [6 x i8]* @intFormat, i64 0, i64 0), i64* %res)
+  %res2 = load i64, i64* %res
+  ret i64 %res2
 }
 
 define void @error() {
@@ -62,18 +70,34 @@ define i64 @strlen(i8* %str) {
   %final_index = load i64, i64* %counter
   ret i64 %final_index
 }
-@.str1 = private constant [5 x i8] c"aba \00"
-@.str2 = private constant [7 x i8] c"cadaba\00"
+@.str1 = private constant [2 x i8] c"0\00"
+@.str2 = private constant [6 x i8] c"not 0\00"
 define i64 @main() {
-	%var1 = alloca i8*
-	%var2 = call i8* @calloc(i64 5, i64 1)
-	call void @memcpy(i8* %var2, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str1, i64 0, i64 0), i64 5)
-	%var3 = call i8* @calloc(i64 7, i64 1)
-	call void @memcpy(i8* %var3, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str2, i64 0, i64 0), i64 7)
-	%var4 = call i8* @concat_strings(i8* %var2, i8* %var3)
-	store i8* %var4, i8** %var1
-	%var5 = load i8*, i8** %var1
-	call void @printString(i8* %var5)
+	%var1 = alloca i64
+%var2 = call i64 @readInt()
+	store i64 %var2, i64* %var1
+	%var3 = load i64, i64* %var1
+	call void @printInt(i64 %var3)
+	%var5 = load i64, i64* %var1
+	%var4 = icmp sgt i64 %var5, 5
+	br i1 %var4, label %1, label %2
+; <label>:1
+	%var6 = call i8* @calloc(i64 2, i64 1)
+	call void @memcpy(i8* %var6, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str1, i64 0, i64 0), i64 2)
+	call void @printString(i8* %var6)
+	br label %3
+; <label>:2
+	%var7 = call i8* @calloc(i64 6, i64 1)
+	call void @memcpy(i8* %var7, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str2, i64 0, i64 0), i64 6)
+	call void @printString(i8* %var7)
+	br label %3
+; <label>:3
+	%var9 = load i64, i64* %var1
+	%var8 = sub i64 100, %var9
+	%var10 = alloca i64
+	store i64 %var8, i64* %var10
+	%var11 = load i64, i64* %var10
+	call void @printInt(i64 %var11)
 	ret i64 0
 }
 

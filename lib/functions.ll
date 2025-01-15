@@ -1,5 +1,6 @@
-@intFormat = internal constant [4 x i8] c"%d\0A\00"
+@intFormat = internal constant [6 x i8] c"%lld\0A\00"
 @strFormat = private unnamed_addr constant [14 x i8] c"runtime error\00", align 1
+@endl = private unnamed_addr constant [2 x i8] c"\0A\00", align 1
 
 declare i64 @printf(i8*, ...)
 declare i64 @scanf(i8*, ...)
@@ -11,17 +12,18 @@ declare void @memcpy(i8*, i8*, i64)
 declare void @exit()
 
 define void @printInt(i64 %x) {
-    call i64 (i8*, ...) @printf(i8* getelementptr([4 x i8], [4 x i8]* @intFormat, i64 0, i64 0), i64 %x)
+    call i64 (i8*, ...) @printf(i8* getelementptr([6 x i8], [6 x i8]* @intFormat, i64 0, i64 0), i64 %x)
     ret void
 }
 define void @printString(i8* %x) {
-    call i64 (i8*, ...) @printf(i8* %x)
+    %str = call i8* @concat_strings(i8* %x, i8* getelementptr([2 x i8], [2 x i8]* @endl, i64 0, i64 0))
+    call i64 (i8*, ...) @printf(i8* %str)
     ret void
 }
 
 define i64 @readInt() {
   %res = alloca i64
-  %scan_res = call i64 (i8*, ...) @scanf(i8* getelementptr([4 x i8], [4 x i8]* @intFormat, i64 0, i64 0), i64* %res)
+  %scan_res = call i64 (i8*, ...) @scanf(i8* getelementptr([6 x i8], [6 x i8]* @intFormat, i64 0, i64 0), i64* %res)
   %res2 = load i64, i64* %res
   ret i64 %res2
 }
