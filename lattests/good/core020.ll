@@ -73,6 +73,7 @@ define i64 @strlen(i8* %str) {
   ret i64 %final_index
 }
 define void @p() {
+	ret void
 }
 
 	

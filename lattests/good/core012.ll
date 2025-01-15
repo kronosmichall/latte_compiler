@@ -72,26 +72,28 @@ define i64 @strlen(i8* %str) {
   %final_index = load i64, i64* %counter
   ret i64 %final_index
 }
-@.str1 = private constant [5 x i8] c"true\00"
 @.str3 = private constant [7 x i8] c"string\00"
-@.str2 = private constant [6 x i8] c"false\00"
+@.str1 = private constant [5 x i8] c"true\00"
 @.str4 = private constant [2 x i8] c" \00"
 @.str5 = private constant [14 x i8] c"concatenation\00"
+@.str2 = private constant [6 x i8] c"false\00"
 define void @printBool(i1 %b) {
 	%var1 = alloca i1
 	store i1 %b, i1* %var1
-	br i1 %var1, label %1, label %2
+	%var2 = load i1, i1* %var1
+	br i1 %var2, label %1, label %2
 ; <label>:1
-	%var2 = call i8* @calloc(i64 5, i64 1)
-	call void @memcpy(i8* %var2, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str1, i64 0, i64 0), i64 5)
-	call void @printString(i8* %var2)
-	ret void
-; <label>:2
-	%var3 = call i8* @calloc(i64 6, i64 1)
-	call void @memcpy(i8* %var3, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str2, i64 0, i64 0), i64 6)
+	%var3 = call i8* @calloc(i64 5, i64 1)
+	call void @memcpy(i8* %var3, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str1, i64 0, i64 0), i64 5)
 	call void @printString(i8* %var3)
 	ret void
+; <label>:2
+	%var4 = call i8* @calloc(i64 6, i64 1)
+	call void @memcpy(i8* %var4, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str2, i64 0, i64 0), i64 6)
+	call void @printString(i8* %var4)
+	ret void
 ; <label>:3
+	ret void
 }
 
 	

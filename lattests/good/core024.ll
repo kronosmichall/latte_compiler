@@ -91,6 +91,7 @@ define void @f(i64 %x, i64 %y) {
 	call void @printString(i8* %var8)
 	br label %2
 ; <label>:2
+	ret void
 }
 
 	

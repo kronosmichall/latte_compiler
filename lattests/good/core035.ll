@@ -81,6 +81,7 @@ define void @f(i64 %a, i64 %b) {
 	%var5 = load i64, i64* %var2
 	%var3 = srem i64 %var4, %var5
 	call void @printInt(i64 %var3)
+	ret void
 }
 
 	

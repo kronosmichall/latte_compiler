@@ -322,7 +322,8 @@ exec (VRet line : xs) = do
 
 exec (Cond line expr stmt : xs) = do
   v <- eval expr
-  case v of
+  v1 <- unwrap v
+  case v1 of
     VarBool 0 -> exec xs
     VarBool 1 -> exec $ stmt : xs
     VarReg (reg, ref, _) -> do
@@ -338,7 +339,8 @@ exec (Cond line expr stmt : xs) = do
     x -> error $ "unexpected type" ++ show x
 exec (CondElse _ expr stmt1 stmt2 : xs) = do
   v <- eval expr
-  case v of
+  v1 <- unwrap v
+  case v1 of
     VarBool 0 -> exec $ stmt2 : xs
     VarBool 1 -> exec $ stmt1 : xs
     VarReg (reg, ref, _) -> do
@@ -362,7 +364,8 @@ exec (While line expr stmt : xs) = do
   addInstr i0
   addLabel l0
   v <- eval expr
-  case v of
+  v1 <- unwrap v
+  case v1 of
     VarBool 0 -> exec xs
     VarBool 1 -> do
       let l1 = show line ++ "true"
@@ -418,7 +421,10 @@ execTopDef topdef = do
   case topdef of
     (FnDef line ret name args (Block _ stmts)) -> do
       initArgs args
-      exec stmts
+      let stmts2 = case ret of
+            Void _ -> stmts ++ [VRet BNFC'NoPosition]
+            _ -> stmts
+      exec stmts2
 
   (sts', funs', ref', res') <- get
   put (sts, funs', ref, res' ++ ["}", ""])

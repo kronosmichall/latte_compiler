@@ -82,6 +82,7 @@ define void @f(i8* %arg) {
 	store i8* %var2, i8** %var1
 	%var3 = load i8*, i8** %var1
 	call void @printString(i8* %var3)
+	ret void
 }
 
 	

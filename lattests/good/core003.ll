@@ -85,6 +85,7 @@ define i64 @g() {
 	
 
 define void @p() {
+	ret void
 }
 
 	

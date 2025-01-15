@@ -88,16 +88,17 @@ define i1 @dontCallMe(i64 %x) {
 define void @printBool(i1 %b) {
 	%var1 = alloca i1
 	store i1 %b, i1* %var1
-	br i1 %var1, label %1, label %2
+	%var2 = load i1, i1* %var1
+	br i1 %var2, label %1, label %2
 ; <label>:1
-	%var2 = call i8* @calloc(i64 5, i64 1)
-	call void @memcpy(i8* %var2, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str1, i64 0, i64 0), i64 5)
-	call void @printString(i8* %var2)
+	%var3 = call i8* @calloc(i64 5, i64 1)
+	call void @memcpy(i8* %var3, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str1, i64 0, i64 0), i64 5)
+	call void @printString(i8* %var3)
 	br label %3
 ; <label>:2
-	%var3 = call i8* @calloc(i64 6, i64 1)
-	call void @memcpy(i8* %var3, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str2, i64 0, i64 0), i64 6)
-	call void @printString(i8* %var3)
+	%var4 = call i8* @calloc(i64 6, i64 1)
+	call void @memcpy(i8* %var4, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str2, i64 0, i64 0), i64 6)
+	call void @printString(i8* %var4)
 	br label %3
 ; <label>:3
 	ret void
