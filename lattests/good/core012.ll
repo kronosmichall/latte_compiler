@@ -92,7 +92,6 @@ define void @printBool(i1 %b) {
 	call void @memcpy(i8* %var4, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str2, i64 0, i64 0), i64 6)
 	call void @printString(i8* %var4)
 	ret void
-; <label>:3
 	ret void
 }
 

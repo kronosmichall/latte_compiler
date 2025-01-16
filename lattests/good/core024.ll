@@ -87,9 +87,10 @@ define void @f(i64 %x, i64 %y) {
 	br label %3
 ; <label>:2
 %var7 = call i1 @e()
+	%lbvar7 = add i1 0, %var7
 	br label %3
 ; <label>:3
-	%var6 = phi i1 [ %var7, %2], [1, %1]
+	%var6 = phi i1 [ %lbvar7, %2], [1, %1]
 	br i1 %var6, label %4, label %5
 ; <label>:4
 	%var8 = call i8* @calloc(i64 4, i64 1)

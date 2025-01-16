@@ -91,9 +91,6 @@ define i64 @ev(i64 %y) {
 	ret i64 0
 ; <label>:4
 	ret i64 1
-; <label>:5
-	br label %6
-; <label>:6
 }
 
 	

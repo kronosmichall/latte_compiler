@@ -23,17 +23,13 @@
 //}
 
 int main() {
-  int x;
-  x = readInt();
-  printInt(x);
-  if (x > 5) {
+  int x = 4;
+  if (1 != 2 && 2 != 3 && 3 != 4) {
+    printString("good");
+  } else {
+    printString("apa");
+  }
 
-      printString("0");
-    } else {
-        printString("not 0");
-      }
-  int y = 100 - x;
-  printInt(y);
   return 0;
 }
 

@@ -95,7 +95,6 @@ define i64 @main() {
 ; <label>:5
 	call void @printInt(i64 1)
 	ret i64 0
-; <label>:6
 }
 
 	

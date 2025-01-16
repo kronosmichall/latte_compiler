@@ -120,9 +120,10 @@ define i1 @implies(i1 %x, i1 %y) {
 	%var7 = load i1, i1* %var1
 	%var8 = load i1, i1* %var2
 	%var6 = icmp eq i1 %var7, %var8
+	%lbvar6 = add i1 0, %var6
 	br label %3
 ; <label>:3
-	%var5 = phi i1 [ %var8, %2], [1, %1]
+	%var5 = phi i1 [ %lbvar6, %2], [1, %1]
 	ret i1 %var5
 }
 
@@ -142,13 +143,14 @@ define i64 @main() {
 ; <label>:3
 	br label %5
 ; <label>:4
-	%var7 = i1 1
+	%lbvar7 = add i1 0, 1
 	br label %5
 ; <label>:5
-	%var6 = phi i1 [ %var7, %4], [0, %3]
+	%var6 = phi i1 [ %lbvar7, %4], [0, %3]
+	%lbvar6 = add i1 0, %var6
 	br label %6
 ; <label>:6
-	%var4 = phi i1 [ %var7, %2], [0, %1]
+	%var4 = phi i1 [ %lbvar6, %5], [0, %1]
 	br i1 %var4, label %7, label %8
 ; <label>:7
 	call void @printBool(i1 1)
@@ -165,9 +167,10 @@ define i64 @main() {
 	br label %12
 ; <label>:11
 %var11 = call i1 @dontCallMe(i64 1)
+	%lbvar11 = add i1 0, %var11
 	br label %12
 ; <label>:12
-	%var10 = phi i1 [ %var11, %11], [1, %10]
+	%var10 = phi i1 [ %lbvar11, %11], [1, %10]
 	call void @printBool(i1 %var10)
 	%var12 = mul i64 5, -1
 	%var13 = icmp slt i64 4, %var12
@@ -176,9 +179,10 @@ define i64 @main() {
 	br label %15
 ; <label>:14
 %var15 = call i1 @dontCallMe(i64 2)
+	%lbvar15 = add i1 0, %var15
 	br label %15
 ; <label>:15
-	%var14 = phi i1 [ %var15, %14], [0, %13]
+	%var14 = phi i1 [ %lbvar15, %14], [0, %13]
 	call void @printBool(i1 %var14)
 	%var17 = load i64, i64* %var1
 	%var16 = icmp eq i64 4, %var17
@@ -192,13 +196,14 @@ define i64 @main() {
 ; <label>:18
 	br label %20
 ; <label>:19
-	%var22 = i1 1
+	%lbvar22 = add i1 0, 1
 	br label %20
 ; <label>:20
-	%var21 = phi i1 [ %var22, %19], [0, %18]
+	%var21 = phi i1 [ %lbvar22, %19], [0, %18]
+	%lbvar21 = add i1 0, %var21
 	br label %21
 ; <label>:21
-	%var18 = phi i1 [ %var22, %17], [0, %16]
+	%var18 = phi i1 [ %lbvar21, %20], [0, %16]
 	call void @printBool(i1 %var18)
 %var23 = call i1 @implies(i1 0, i1 0)
 	call void @printBool(i1 %var23)

@@ -1,13 +1,14 @@
 {-# LANGUAGE BlockArguments #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
 
 module LLVM where
 
 import Abs
 import Control.Monad.State
-import Data.List (intercalate, isInfixOf, nub, stripPrefix)
+import Data.List (find, intercalate, isInfixOf, nub, stripPrefix)
 import Data.List.Split (splitOn)
 import Data.Map hiding (foldl, map)
 import qualified Data.Map as Map hiding (foldl, map)
@@ -227,18 +228,36 @@ evalStr str = do
   let len = length str + 1
   let strTyp = "[" ++ show len ++ " x i8]"
   ref <- nextReg
+  addReg
   let i1 = "%var" ++ show ref ++ " = call i8* @calloc(i64 " ++ show len ++ ", i64 1)"
   let i2 = "call void @memcpy(i8* %var" ++ show ref ++ ", i8* getelementptr inbounds (" ++ strTyp ++ ", " ++ strTyp ++ "* " ++ show str ++ ", i64 0, i64 0), i64 " ++ show len ++ ")"
   addInstr $ combineInstr [i1, i2]
-  addReg
   return $ VarReg (ref, 1, MyStr)
+
+lastLbVar :: MyMonad String
+lastLbVar = do
+  (_, _, _, res) <- get
+  let res2 = reverse res
+  let lblstr = find (\s -> "%lbvar" `isInfixOf` s) res2
+  let numstr = case lblstr of
+        Just s -> head (splitOn " =" s)
+        Nothing -> error "Label not found"
+  return $ (splitOn "\t" numstr) !! 1
+
+lastLbl :: MyMonad String
+lastLbl = do
+  (_, _, _, res) <- get
+  let res2 = reverse res
+  let lbls = Prelude.take 2 [x | x <- res2, "; <label>:" `isInfixOf` x]
+  let lbl2 = lbls !! 1
+  return $ (splitOn "; <label>:" lbl2) !! 1
 
 evalAnd :: Expr -> Expr -> MyMonad VarVal
 evalAnd e1 e2 = do
   v1 <- eval e1
   v11 <- unwrap v1
   case v11 of
-    VarBool 0 -> eval e2
+    VarBool 0 -> return $ VarBool 0
     VarBool 1 -> return v11
     VarReg (reg, ref, _) -> do
       newRef <- nextReg
@@ -257,14 +276,21 @@ evalAnd e1 e2 = do
         VarBool x -> do
           newRef2 <- nextReg
           addReg
-          addInstr $ "%var" ++ show newRef2 ++ " = i1 " ++ show x
-        VarReg (reg2, ref2, _) -> return ()
+          addInstr $ "%lbvar" ++ show newRef2 ++ " = add i1 0, " ++ show x
+        VarReg (reg2, ref2, _) -> do
+          addInstr $ "%lbvar" ++ show reg2 ++ " = add i1 0, %var" ++ show reg2
         x -> error $ "unexpected type" ++ show x
       addInstr $ "br label %" ++ l3
       addLabel l3
-      newRef2 <- nextReg
-      let newRef22 = newRef2 - 1
-      let ass = "%var" ++ show newRef ++ " = phi i1 [ %var" ++ show newRef22 ++ ", %" ++ l2 ++ "], [0, %" ++ l1 ++ "]"
+      newRef22 <- case v22 of
+        VarBool x -> do
+          newRef2 <- nextReg
+          return $ newRef2 - 1
+        VarReg (reg2, ref2, _) -> return reg2
+
+      lbl <- lastLbl
+      lbVar <- lastLbVar
+      let ass = "%var" ++ show newRef ++ " = phi i1 [ " ++ lbVar ++ ", %" ++ lbl ++ "], [0, %" ++ l1 ++ "]"
       addInstr ass
       return (VarReg (newRef, 1, MyBool))
 
@@ -274,7 +300,7 @@ evalOr e1 e2 = do
   v11 <- unwrap v1
   case v11 of
     VarBool 0 -> eval e2
-    VarBool 1 -> return v11
+    VarBool 1 -> return $ VarBool 1
     VarReg (reg, ref, _) -> do
       newRef <- nextReg
       addReg
@@ -292,16 +318,24 @@ evalOr e1 e2 = do
         VarBool x -> do
           newRef2 <- nextReg
           addReg
-          addInstr $ "%var" ++ show newRef2 ++ " = i1 " ++ show x
-        VarReg (reg2, ref2, _) -> return ()
+          addInstr $ "%lbvar" ++ show newRef2 ++ " = add i1 0, " ++ show x
+        VarReg (reg2, ref2, _) -> do
+          addInstr $ "%lbvar" ++ show reg2 ++ " = add i1 0, %var" ++ show reg2
         x -> error $ "unexpected type" ++ show x
       addInstr $ "br label %" ++ l3
       addLabel l3
-      newRef2 <- nextReg
-      let newRef22 = newRef2 - 1
-      let ass = "%var" ++ show newRef ++ " = phi i1 [ %var" ++ show newRef22 ++ ", %" ++ l2 ++ "], [1, %" ++ l1 ++ "]"
+      newRef22 <- case v22 of
+        VarBool x -> do
+          newRef2 <- nextReg
+          return $ newRef2 - 1
+        VarReg (reg2, ref2, _) -> return reg2
+
+      lbl <- lastLbl
+      lbVar <- lastLbVar
+      let ass = "%var" ++ show newRef ++ " = phi i1 [ " ++ lbVar ++ ", %" ++ lbl ++ "], [1, %" ++ l1 ++ "]"
       addInstr ass
       return (VarReg (newRef, 1, MyBool))
+
 eval :: Expr -> MyMonad VarVal
 eval (EVar line (Ident name)) = do
   reg <- getVarReg name
@@ -346,6 +380,16 @@ eval (ERel line e1 op e2) = do
   evalOp'' v1 opStr v2 MyBool
 eval (EAnd line e1 e2) = evalAnd e1 e2
 eval (EOr line e1 e2) = evalOr e1 e2
+
+lastInstr :: MyMonad Instr
+lastInstr = do
+  (_, _, _, res) <- get
+  return $ last res
+
+lastInstrIsRet :: MyMonad Bool
+lastInstrIsRet = do
+  instr <- lastInstr
+  return $ "\tret " `isInfixOf` instr
 
 exec :: [Stmt] -> MyMonad ()
 exec [] = return ()
@@ -415,11 +459,13 @@ exec (CondElse _ expr stmt1 stmt2 : xs) = do
       addInstr i1
       addLabel l1
       exec [stmt1]
-      addInstr $ "br label %" ++ l3
+      ret1 <- lastInstrIsRet
+      unless ret1 $ addInstr $ "br label %" ++ l3
       addLabel l2
       exec [stmt2]
-      addInstr $ "br label %" ++ l3
-      addLabel l3
+      ret2 <- lastInstrIsRet
+      unless ret2 $ addInstr $ "br label %" ++ l3
+      unless (ret1 && ret2) $ addLabel l3
       exec xs
     x -> error $ "unexpected type" ++ show x
 exec (While line expr stmt : xs) = do

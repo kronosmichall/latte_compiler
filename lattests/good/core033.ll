@@ -84,9 +84,10 @@ define i64 @funkcja_ifbooltrudny(i1 %f, i1 %t) {
 	br label %3
 ; <label>:2
 	%var6 = load i1, i1* %var1
+	%lbvar6 = add i1 0, %var6
 	br label %3
 ; <label>:3
-	%var5 = phi i1 [ %var6, %2], [0, %1]
+	%var5 = phi i1 [ %lbvar6, %2], [0, %1]
 	br i1 %var5, label %4, label %5
 ; <label>:4
 	br label %9
@@ -98,13 +99,15 @@ define i64 @funkcja_ifbooltrudny(i1 %f, i1 %t) {
 ; <label>:7
 	%var11 = load i1, i1* %var2
 	%var10 = xor i1 %var11, 1
+	%lbvar10 = add i1 0, %var10
 	br label %8
 ; <label>:8
-	%var9 = phi i1 [ %var11, %7], [1, %6]
+	%var9 = phi i1 [ %lbvar10, %7], [1, %6]
 	%var12 = xor i1 %var9, 1
+	%lbvar12 = add i1 0, %var12
 	br label %9
 ; <label>:9
-	%var7 = phi i1 [ %var12, %5], [1, %4]
+	%var7 = phi i1 [ %lbvar12, %8], [1, %4]
 	br i1 %var7, label %10, label %11
 ; <label>:10
 	call void @printInt(i64 1042)

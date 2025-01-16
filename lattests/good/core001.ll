@@ -120,7 +120,6 @@ define i64 @rfac(i64 %n) {
 	%var8 = load i64, i64* %var1
 	%var7 = mul i64 %var8, %var6
 	ret i64 %var7
-; <label>:3
 }
 
 	
@@ -140,7 +139,6 @@ define i64 @mfac(i64 %n) {
 	%var8 = load i64, i64* %var1
 	%var7 = mul i64 %var8, %var6
 	ret i64 %var7
-; <label>:3
 }
 
 	
@@ -160,7 +158,6 @@ define i64 @nfac(i64 %n) {
 	ret i64 %var7
 ; <label>:2
 	ret i64 1
-; <label>:3
 }
 
 	

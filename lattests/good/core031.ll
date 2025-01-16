@@ -85,9 +85,10 @@ define i64 @f(i64 %a, i64 %b) {
 ; <label>:2
 	%var7 = load i64, i64* %var2
 	%var6 = icmp sgt i64 %var7, 0
+	%lbvar6 = add i1 0, %var6
 	br label %3
 ; <label>:3
-	%var5 = phi i1 [ %var7, %2], [0, %1]
+	%var5 = phi i1 [ %lbvar6, %2], [0, %1]
 	br i1 %var5, label %4, label %5
 ; <label>:4
 	br label %9
@@ -100,18 +101,19 @@ define i64 @f(i64 %a, i64 %b) {
 ; <label>:7
 	%var13 = load i64, i64* %var2
 	%var12 = icmp slt i64 %var13, 0
+	%lbvar12 = add i1 0, %var12
 	br label %8
 ; <label>:8
-	%var11 = phi i1 [ %var13, %7], [0, %6]
+	%var11 = phi i1 [ %lbvar12, %7], [0, %6]
+	%lbvar11 = add i1 0, %var11
 	br label %9
 ; <label>:9
-	%var8 = phi i1 [ %var13, %5], [1, %4]
+	%var8 = phi i1 [ %lbvar11, %8], [1, %4]
 	br i1 %var8, label %10, label %11
 ; <label>:10
 	ret i64 7
 ; <label>:11
 	ret i64 42
-; <label>:12
 }
 
 	
