@@ -2,3 +2,18 @@ poza Prelude w kodzie używamy biblitek:
 mtl, array, containers, process, filepath (wszystkie są na students)
 
 w folderze bnfc mamy pliki stworzone przez bnfc
+
+Działanie programu:
+1. zadeklarowanie funkcji wewnętrznych (readInt, printInt, readString, printString, error)
+2. dla każdego topdef: inicjalizacja zmiennych wejściowych
+3. generowanie kodu. na tym etapie labele mają wartości przejsciowe (niepoprawne)
+Gdy sprawdzamy czy zmienna %var2 jest prawdziwa, to tworzą się labele %2true, %2false, %2end, 
+które służą do zadeklarowania odpowiednich gałęzi wykonywania programu.
+4. operacje &&(And) i ||(Or) są leniwie obliczane. Przy obliczaniu ich używam też optymalizacji phi.
+5. na koniec podmieniam przejściowe nazwy labeli na kolejne numery
+
+
+Poza standardową bibliotką haskella używam jednej biblioteki pomocniczej: split
+Pozwala ona na rozbijanie napisów względem występowania napisu.
+W mojej impementacji służy głownie do wyciągania przejściowych nazw labeli i mapowaniu na końcowe.
+
