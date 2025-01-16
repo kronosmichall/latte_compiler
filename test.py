@@ -25,10 +25,11 @@ for latte in sorted(latte_files):
         instr2 = f"./{bc}"
         try: 
             with open(input) as input_file:
-                instr2 += f" << {input_file.read()}"
+                instr2 += f" < {input}"
         except: pass 
 
         out1 = subprocess.run(instr, shell=True, capture_output=True)
+        print(instr2)
         out = subprocess.run(instr2, shell=True, capture_output=True)
         out = out.stdout.decode("utf-8")
 
