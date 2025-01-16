@@ -117,45 +117,93 @@ define i64 @main() {
 	call void @printString(i8* %var1)
 	%var2 = mul i64 1, -1
 %var3 = call i1 @test(i64 %var2)
-%var4 = call i1 @test(i64 0)
-	%var5 = and i1 %var3, %var4
-	call void @printBool(i1 %var5)
+	br i1 %var3, label %2, label %1
+; <label>:1
+	br label %3
+; <label>:2
+%var5 = call i1 @test(i64 0)
+	br label %3
+; <label>:3
+	%var4 = phi i1 [ %var5, %2], [0, %1]
+	call void @printBool(i1 %var4)
 	%var6 = mul i64 2, -1
 %var7 = call i1 @test(i64 %var6)
-%var8 = call i1 @test(i64 1)
-	%var9 = and i1 %var7, %var8
-	call void @printBool(i1 %var9)
+	br i1 %var7, label %5, label %4
+; <label>:4
+	br label %6
+; <label>:5
+%var9 = call i1 @test(i64 1)
+	br label %6
+; <label>:6
+	%var8 = phi i1 [ %var9, %5], [0, %4]
+	call void @printBool(i1 %var8)
 %var10 = call i1 @test(i64 3)
-	%var11 = mul i64 5, -1
-%var12 = call i1 @test(i64 %var11)
-	%var13 = and i1 %var10, %var12
-	call void @printBool(i1 %var13)
+	br i1 %var10, label %8, label %7
+; <label>:7
+	br label %9
+; <label>:8
+	%var12 = mul i64 5, -1
+%var13 = call i1 @test(i64 %var12)
+	br label %9
+; <label>:9
+	%var11 = phi i1 [ %var13, %8], [0, %7]
+	call void @printBool(i1 %var11)
 %var14 = call i1 @test(i64 234234)
-%var15 = call i1 @test(i64 21321)
-	%var16 = and i1 %var14, %var15
-	call void @printBool(i1 %var16)
+	br i1 %var14, label %11, label %10
+; <label>:10
+	br label %12
+; <label>:11
+%var16 = call i1 @test(i64 21321)
+	br label %12
+; <label>:12
+	%var15 = phi i1 [ %var16, %11], [0, %10]
+	call void @printBool(i1 %var15)
 	%var17 = call i8* @calloc(i64 3, i64 1)
 	call void @memcpy(i8* %var17, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str4, i64 0, i64 0), i64 3)
 	call void @printString(i8* %var17)
 	%var18 = mul i64 1, -1
 %var19 = call i1 @test(i64 %var18)
-%var20 = call i1 @test(i64 0)
-	%var21 = or i1 %var19, %var20
-	call void @printBool(i1 %var21)
+	br i1 %var19, label %13, label %14
+; <label>:13
+	br label %15
+; <label>:14
+%var21 = call i1 @test(i64 0)
+	br label %15
+; <label>:15
+	%var20 = phi i1 [ %var21, %14], [1, %13]
+	call void @printBool(i1 %var20)
 	%var22 = mul i64 2, -1
 %var23 = call i1 @test(i64 %var22)
-%var24 = call i1 @test(i64 1)
-	%var25 = or i1 %var23, %var24
-	call void @printBool(i1 %var25)
+	br i1 %var23, label %16, label %17
+; <label>:16
+	br label %18
+; <label>:17
+%var25 = call i1 @test(i64 1)
+	br label %18
+; <label>:18
+	%var24 = phi i1 [ %var25, %17], [1, %16]
+	call void @printBool(i1 %var24)
 %var26 = call i1 @test(i64 3)
-	%var27 = mul i64 5, -1
-%var28 = call i1 @test(i64 %var27)
-	%var29 = or i1 %var26, %var28
-	call void @printBool(i1 %var29)
+	br i1 %var26, label %19, label %20
+; <label>:19
+	br label %21
+; <label>:20
+	%var28 = mul i64 5, -1
+%var29 = call i1 @test(i64 %var28)
+	br label %21
+; <label>:21
+	%var27 = phi i1 [ %var29, %20], [1, %19]
+	call void @printBool(i1 %var27)
 %var30 = call i1 @test(i64 234234)
-%var31 = call i1 @test(i64 21321)
-	%var32 = or i1 %var30, %var31
-	call void @printBool(i1 %var32)
+	br i1 %var30, label %22, label %23
+; <label>:22
+	br label %24
+; <label>:23
+%var32 = call i1 @test(i64 21321)
+	br label %24
+; <label>:24
+	%var31 = phi i1 [ %var32, %23], [1, %22]
+	call void @printBool(i1 %var31)
 	%var33 = call i8* @calloc(i64 2, i64 1)
 	call void @memcpy(i8* %var33, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str5, i64 0, i64 0), i64 2)
 	call void @printString(i8* %var33)

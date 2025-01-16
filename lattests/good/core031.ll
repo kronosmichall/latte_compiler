@@ -79,21 +79,39 @@ define i64 @f(i64 %a, i64 %b) {
 	store i64 %b, i64* %var2
 	%var4 = load i64, i64* %var1
 	%var3 = icmp sgt i64 %var4, 0
-	%var6 = load i64, i64* %var2
-	%var5 = icmp sgt i64 %var6, 0
-	%var7 = and i1 %var3, %var5
-	%var9 = load i64, i64* %var1
-	%var8 = icmp slt i64 %var9, 0
-	%var11 = load i64, i64* %var2
-	%var10 = icmp slt i64 %var11, 0
-	%var12 = and i1 %var8, %var10
-	%var13 = or i1 %var7, %var12
-	br i1 %var13, label %1, label %2
+	br i1 %var3, label %2, label %1
 ; <label>:1
-	ret i64 7
+	br label %3
 ; <label>:2
-	ret i64 42
+	%var7 = load i64, i64* %var2
+	%var6 = icmp sgt i64 %var7, 0
+	br label %3
 ; <label>:3
+	%var5 = phi i1 [ %var7, %2], [0, %1]
+	br i1 %var5, label %4, label %5
+; <label>:4
+	br label %9
+; <label>:5
+	%var10 = load i64, i64* %var1
+	%var9 = icmp slt i64 %var10, 0
+	br i1 %var9, label %7, label %6
+; <label>:6
+	br label %8
+; <label>:7
+	%var13 = load i64, i64* %var2
+	%var12 = icmp slt i64 %var13, 0
+	br label %8
+; <label>:8
+	%var11 = phi i1 [ %var13, %7], [0, %6]
+	br label %9
+; <label>:9
+	%var8 = phi i1 [ %var13, %5], [1, %4]
+	br i1 %var8, label %10, label %11
+; <label>:10
+	ret i64 7
+; <label>:11
+	ret i64 42
+; <label>:12
 }
 
 	

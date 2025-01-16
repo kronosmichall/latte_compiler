@@ -113,11 +113,17 @@ define i1 @implies(i1 %x, i1 %y) {
 	store i1 %y, i1* %var2
 	%var4 = load i1, i1* %var1
 	%var3 = xor i1 %var4, 1
-	%var6 = load i1, i1* %var1
-	%var7 = load i1, i1* %var2
-	%var5 = icmp eq i1 %var6, %var7
-	%var8 = or i1 %var3, %var5
-	ret i1 %var8
+	br i1 %var3, label %1, label %2
+; <label>:1
+	br label %3
+; <label>:2
+	%var7 = load i1, i1* %var1
+	%var8 = load i1, i1* %var2
+	%var6 = icmp eq i1 %var7, %var8
+	br label %3
+; <label>:3
+	%var5 = phi i1 [ %var8, %2], [1, %1]
+	ret i1 %var5
 }
 
 	
@@ -127,43 +133,81 @@ define i64 @main() {
 	store i64 4, i64* %var1
 	%var3 = load i64, i64* %var1
 	%var2 = icmp sle i64 3, %var3
-	%var4 = icmp ne i64 4, 2
-	%var5 = and i1 %var4, 1
-	%var6 = and i1 %var2, %var5
-	br i1 %var6, label %1, label %2
+	br i1 %var2, label %2, label %1
 ; <label>:1
-	call void @printBool(i1 1)
-	br label %3
+	br label %6
 ; <label>:2
-	%var7 = call i8* @calloc(i64 4, i64 1)
-	call void @memcpy(i8* %var7, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str3, i64 0, i64 0), i64 4)
-	call void @printString(i8* %var7)
-	br label %3
+	%var5 = icmp ne i64 4, 2
+	br i1 %var5, label %4, label %3
 ; <label>:3
-	%var8 = icmp eq i1 1, 1
-%var9 = call i1 @dontCallMe(i64 1)
-	%var10 = or i1 %var8, %var9
+	br label %5
+; <label>:4
+	%var7 = i1 1
+	br label %5
+; <label>:5
+	%var6 = phi i1 [ %var7, %4], [0, %3]
+	br label %6
+; <label>:6
+	%var4 = phi i1 [ %var7, %2], [0, %1]
+	br i1 %var4, label %7, label %8
+; <label>:7
+	call void @printBool(i1 1)
+	br label %9
+; <label>:8
+	%var8 = call i8* @calloc(i64 4, i64 1)
+	call void @memcpy(i8* %var8, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str3, i64 0, i64 0), i64 4)
+	call void @printString(i8* %var8)
+	br label %9
+; <label>:9
+	%var9 = icmp eq i1 1, 1
+	br i1 %var9, label %10, label %11
+; <label>:10
+	br label %12
+; <label>:11
+%var11 = call i1 @dontCallMe(i64 1)
+	br label %12
+; <label>:12
+	%var10 = phi i1 [ %var11, %11], [1, %10]
 	call void @printBool(i1 %var10)
-	%var11 = mul i64 5, -1
-	%var12 = icmp slt i64 4, %var11
-%var13 = call i1 @dontCallMe(i64 2)
-	%var14 = and i1 %var12, %var13
+	%var12 = mul i64 5, -1
+	%var13 = icmp slt i64 4, %var12
+	br i1 %var13, label %14, label %13
+; <label>:13
+	br label %15
+; <label>:14
+%var15 = call i1 @dontCallMe(i64 2)
+	br label %15
+; <label>:15
+	%var14 = phi i1 [ %var15, %14], [0, %13]
 	call void @printBool(i1 %var14)
-	%var16 = load i64, i64* %var1
-	%var15 = icmp eq i64 4, %var16
-	%var17 = xor i1 0, 1
-	%var18 = icmp eq i1 1, %var17
-	%var19 = and i1 %var18, 1
-	%var20 = and i1 %var15, %var19
-	call void @printBool(i1 %var20)
-%var21 = call i1 @implies(i1 0, i1 0)
-	call void @printBool(i1 %var21)
-%var22 = call i1 @implies(i1 0, i1 1)
-	call void @printBool(i1 %var22)
-%var23 = call i1 @implies(i1 1, i1 0)
+	%var17 = load i64, i64* %var1
+	%var16 = icmp eq i64 4, %var17
+	br i1 %var16, label %17, label %16
+; <label>:16
+	br label %21
+; <label>:17
+	%var19 = xor i1 0, 1
+	%var20 = icmp eq i1 1, %var19
+	br i1 %var20, label %19, label %18
+; <label>:18
+	br label %20
+; <label>:19
+	%var22 = i1 1
+	br label %20
+; <label>:20
+	%var21 = phi i1 [ %var22, %19], [0, %18]
+	br label %21
+; <label>:21
+	%var18 = phi i1 [ %var22, %17], [0, %16]
+	call void @printBool(i1 %var18)
+%var23 = call i1 @implies(i1 0, i1 0)
 	call void @printBool(i1 %var23)
-%var24 = call i1 @implies(i1 1, i1 1)
+%var24 = call i1 @implies(i1 0, i1 1)
 	call void @printBool(i1 %var24)
+%var25 = call i1 @implies(i1 1, i1 0)
+	call void @printBool(i1 %var25)
+%var26 = call i1 @implies(i1 1, i1 1)
+	call void @printBool(i1 %var26)
 	ret i64 0
 }
 

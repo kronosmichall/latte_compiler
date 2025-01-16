@@ -82,15 +82,21 @@ define void @f(i64 %x, i64 %y) {
 	%var4 = load i64, i64* %var2
 	%var5 = load i64, i64* %var1
 	%var3 = icmp sgt i64 %var4, %var5
-%var6 = call i1 @e()
-	%var7 = or i1 %var3, %var6
-	br i1 %var7, label %1, label %2
+	br i1 %var3, label %1, label %2
 ; <label>:1
+	br label %3
+; <label>:2
+%var7 = call i1 @e()
+	br label %3
+; <label>:3
+	%var6 = phi i1 [ %var7, %2], [1, %1]
+	br i1 %var6, label %4, label %5
+; <label>:4
 	%var8 = call i8* @calloc(i64 4, i64 1)
 	call void @memcpy(i8* %var8, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str1, i64 0, i64 0), i64 4)
 	call void @printString(i8* %var8)
-	br label %2
-; <label>:2
+	br label %5
+; <label>:5
 	ret void
 }
 

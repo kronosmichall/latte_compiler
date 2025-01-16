@@ -79,22 +79,40 @@ define i64 @funkcja_ifbooltrudny(i1 %f, i1 %t) {
 	store i1 %t, i1* %var2
 	%var4 = load i1, i1* %var1
 	%var3 = xor i1 %var4, 1
-	%var6 = load i1, i1* %var1
-	%var5 = and i1 %var3, %var6
-	%var8 = load i1, i1* %var2
-	%var7 = xor i1 %var8, 1
-	%var10 = load i1, i1* %var1
-	%var9 = or i1 %var10, %var7
-	%var11 = xor i1 %var9, 1
-	%var12 = or i1 %var5, %var11
-	br i1 %var12, label %1, label %2
+	br i1 %var3, label %2, label %1
 ; <label>:1
-	call void @printInt(i64 1042)
 	br label %3
 ; <label>:2
-	call void @printInt(i64 2042)
+	%var6 = load i1, i1* %var1
 	br label %3
 ; <label>:3
+	%var5 = phi i1 [ %var6, %2], [0, %1]
+	br i1 %var5, label %4, label %5
+; <label>:4
+	br label %9
+; <label>:5
+	%var8 = load i1, i1* %var1
+	br i1 %var8, label %6, label %7
+; <label>:6
+	br label %8
+; <label>:7
+	%var11 = load i1, i1* %var2
+	%var10 = xor i1 %var11, 1
+	br label %8
+; <label>:8
+	%var9 = phi i1 [ %var11, %7], [1, %6]
+	%var12 = xor i1 %var9, 1
+	br label %9
+; <label>:9
+	%var7 = phi i1 [ %var12, %5], [1, %4]
+	br i1 %var7, label %10, label %11
+; <label>:10
+	call void @printInt(i64 1042)
+	br label %12
+; <label>:11
+	call void @printInt(i64 2042)
+	br label %12
+; <label>:12
 	ret i64 0
 }
 

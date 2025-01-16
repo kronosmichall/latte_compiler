@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
@@ -10,7 +11,7 @@ import Data.List (intercalate, isInfixOf, nub, stripPrefix)
 import Data.List.Split (splitOn)
 import Data.Map hiding (foldl, map)
 import qualified Data.Map as Map hiding (foldl, map)
-import Data.Maybe (isNothing)
+import Data.Maybe (isJust, isNothing)
 import Debug.Trace (trace)
 import GHC.OldList (isPrefixOf)
 
@@ -232,7 +233,75 @@ evalStr str = do
   addReg
   return $ VarReg (ref, 1, MyStr)
 
+evalAnd :: Expr -> Expr -> MyMonad VarVal
+evalAnd e1 e2 = do
+  v1 <- eval e1
+  v11 <- unwrap v1
+  case v11 of
+    VarBool 0 -> eval e2
+    VarBool 1 -> return v11
+    VarReg (reg, ref, _) -> do
+      newRef <- nextReg
+      addReg
+      let l1 = show reg ++ "false"
+      let l2 = show reg ++ "true"
+      let l3 = show reg ++ "end"
+      let instr = "br i1 %var" ++ show reg ++ ", label %" ++ l2 ++ ", label %" ++ l1
+      addInstr instr
+      addLabel l1
+      addInstr $ "br label %" ++ l3
+      addLabel l2
+      v2 <- eval e2
+      v22 <- unwrap v2
+      case v22 of
+        VarBool x -> do
+          newRef2 <- nextReg
+          addReg
+          addInstr $ "%var" ++ show newRef2 ++ " = i1 " ++ show x
+        VarReg (reg2, ref2, _) -> return ()
+        x -> error $ "unexpected type" ++ show x
+      addInstr $ "br label %" ++ l3
+      addLabel l3
+      newRef2 <- nextReg
+      let newRef22 = newRef2 - 1
+      let ass = "%var" ++ show newRef ++ " = phi i1 [ %var" ++ show newRef22 ++ ", %" ++ l2 ++ "], [0, %" ++ l1 ++ "]"
+      addInstr ass
+      return (VarReg (newRef, 1, MyBool))
 
+evalOr :: Expr -> Expr -> MyMonad VarVal
+evalOr e1 e2 = do
+  v1 <- eval e1
+  v11 <- unwrap v1
+  case v11 of
+    VarBool 0 -> eval e2
+    VarBool 1 -> return v11
+    VarReg (reg, ref, _) -> do
+      newRef <- nextReg
+      addReg
+      let l1 = show reg ++ "true"
+      let l2 = show reg ++ "false"
+      let l3 = show reg ++ "end"
+      let instr = "br i1 %var" ++ show reg ++ ", label %" ++ l1 ++ ", label %" ++ l2
+      addInstr instr
+      addLabel l1
+      addInstr $ "br label %" ++ l3
+      addLabel l2
+      v2 <- eval e2
+      v22 <- unwrap v2
+      case v22 of
+        VarBool x -> do
+          newRef2 <- nextReg
+          addReg
+          addInstr $ "%var" ++ show newRef2 ++ " = i1 " ++ show x
+        VarReg (reg2, ref2, _) -> return ()
+        x -> error $ "unexpected type" ++ show x
+      addInstr $ "br label %" ++ l3
+      addLabel l3
+      newRef2 <- nextReg
+      let newRef22 = newRef2 - 1
+      let ass = "%var" ++ show newRef ++ " = phi i1 [ %var" ++ show newRef22 ++ ", %" ++ l2 ++ "], [1, %" ++ l1 ++ "]"
+      addInstr ass
+      return (VarReg (newRef, 1, MyBool))
 eval :: Expr -> MyMonad VarVal
 eval (EVar line (Ident name)) = do
   reg <- getVarReg name
@@ -275,13 +344,8 @@ eval (ERel line e1 op e2) = do
   v1 <- eval e1
   v2 <- eval e2
   evalOp'' v1 opStr v2 MyBool
-eval (EAnd line e1 e2) = do
-  let opStr = "and"
-  evalOp e1 opStr e2
-eval (EOr line e1 e2) = do
-  let opStr = "or"
-  evalOp e1 opStr e2
-
+eval (EAnd line e1 e2) = evalAnd e1 e2
+eval (EOr line e1 e2) = evalOr e1 e2
 
 exec :: [Stmt] -> MyMonad ()
 exec [] = return ()
@@ -314,11 +378,11 @@ exec (Ret line expr : xs) = do
   v1 <- unwrap v
   let instr = "ret " ++ show v1
   addInstr instr
-  -- exec xs
+-- exec xs
 exec (VRet line : xs) = do
   let instr = "ret void"
   addInstr instr
-  -- exec xs
+-- exec xs
 
 exec (Cond line expr stmt : xs) = do
   v <- eval expr
@@ -496,11 +560,22 @@ mapInstr :: Instr -> Map String Integer -> Instr
 mapInstr instr mapp = do
   let br = stripPrefix "\tbr" instr
   let label = stripPrefix "; <label>:" instr
-  if isNothing br && isNothing label
-    then instr
-    else
-      if isNothing label
-        then do
+  let phi = "= phi" `isInfixOf` instr
+  case () of
+    _
+      | phi -> do
+          let split1 = splitOn ", %" instr
+          let p1 = head split1 ++ ", %"
+          let split2 = splitOn "]" (split1 !! 1)
+          let p2 = head split2
+          let p2mapped = mapLabel p2 mapp
+          let p3 = "]" ++ split2 !! 1
+          let split3 = splitOn "]" (split1 !! 2)
+          let p4 = head split3
+          let p4mapped = mapLabel p4 mapp
+          let p5 = "]"
+          p1 ++ p2mapped ++ p3 ++ ", %" ++ p4mapped ++ p5
+      | isJust br -> do
           let split1 = splitOn "label %" instr
           let p1 = head split1 ++ "label %"
           let p2 = head $ splitOn ", " (split1 !! 1)
@@ -512,12 +587,13 @@ mapInstr instr mapp = do
               let p4 = safeAt split1 2
               let p4mapped = mapLabel p4 mapp
               p1 ++ p2mapped ++ p3 ++ p4mapped
-        else do
+      | isJust label -> do
           let split1 = splitOn "; <label>:" instr
           let p1 = "; <label>:"
           let p2 = split1 !! 1
           let p2mapped = mapLabel p2 mapp
           p1 ++ p2mapped
+      | otherwise -> instr
 
 findMemCpy :: [Instr] -> [Instr]
 findMemCpy = Prelude.filter (\i -> "call void @memcpy" `isInfixOf` i)
@@ -525,7 +601,7 @@ findMemCpy = Prelude.filter (\i -> "call void @memcpy" `isInfixOf` i)
 fixRets :: [Instr] -> [Instr]
 fixRets [] = []
 fixRets [x] = [x]
-fixRets (x:y:xs) = do
+fixRets (x : y : xs) = do
   let isRet = "\tret " `isInfixOf` x
   let isBr = "\tbr " `isInfixOf` y
   if isRet && isBr
