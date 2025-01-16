@@ -1,5 +1,6 @@
 @intFormat = internal constant [6 x i8] c"%lld\0A\00"
-@strFormat = private unnamed_addr constant [14 x i8] c"runtime error\00", align 1
+@errorFormat = private unnamed_addr constant [14 x i8] c"runtime error\00", align 1
+@strFormat = private unnamed_addr constant [3 x i8] c"%s\00", align 1
 @endl = private unnamed_addr constant [2 x i8] c"\0A\00", align 1
 
 declare i64 @printf(i8*, ...)
@@ -8,6 +9,7 @@ declare i8* @malloc(i64)
 declare i8* @realloc(i8*, i64)
 declare i8* @calloc(i64, i64)
 declare void @memcpy(i8*, i8*, i64)
+declare i8 @getchar()
 
 declare void @exit()
 
@@ -28,8 +30,14 @@ define i64 @readInt() {
   ret i64 %res2
 }
 
+define i8* @readString() {
+  %res= call i8* @calloc(i64 256, i64 1)
+  %scan_res = call i64 (i8*, ...) @scanf(i8* getelementptr([3 x i8], [3 x i8]* @strFormat, i64 0, i64 0), i8* %res)
+  ret i8* %res
+}
+
 define void @error() {
-    %msg = getelementptr inbounds [14 x i8], [14 x i8]* @strFormat, i64 0, i64 0
+    %msg = getelementptr inbounds [14 x i8], [14 x i8]* @errorFormat, i64 0, i64 0
     call void @printString(i8* %msg)
     call void @exit()
     ret void
