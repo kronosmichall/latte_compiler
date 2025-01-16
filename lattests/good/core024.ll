@@ -121,7 +121,7 @@ define i1 @e() {
 	
 
 define i64 @main() {
-	call void @f(i64 1i64 2)
+	call void @f(i64 1,i64 2)
 	ret i64 0
 }
 

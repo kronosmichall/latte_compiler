@@ -95,9 +95,9 @@ define void @f(i64 %a, i64 %b) {
 	
 
 define i64 @main() {
-	call void @f(i64 5i64 3)
+	call void @f(i64 5,i64 3)
 	%var1 = mul i64 5, -1
-	call void @f(i64 %var1i64 3)
+	call void @f(i64 %var1,i64 3)
 	ret i64 0
 }
 

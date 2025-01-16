@@ -151,7 +151,7 @@ funApply funName args = do
 
   if typ == MyVoid
     then do
-      let instr = "call void @" ++ funName ++ "(" ++ join args2 ++ ")"
+      let instr = "call void @" ++ funName ++ "(" ++ intercalate "," args2 ++ ")"
       addInstr instr
       return VarVoid
     else do
