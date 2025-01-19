@@ -86,6 +86,18 @@ define i64 @main() {
 	%var1= load i64, i64* @.listsize
 	%var2 = call i8* @calloc(i64 1, i64 %var1)
 	store i8* %var2, i8** %var0
+	%var3 = load i8*, i8** %var0
+	%var4 = getelementptr  i8, i8* %var3, i64 8
+	%var5 = bitcast i8* %var4 to i64*
+	store i64 1, i64* %var5
+	%var6 = load i8*, i8** %var0
+	%var7 = getelementptr  i8, i8* %var6, i64 8
+	%var8 = bitcast i8* %var7 to i64*
+	%var9 = alloca i64
+	%var10 = load i64, i64* %var8
+	store i64 %var10, i64* %var9
+	%var11 = load i64, i64* %var9
+	call void @printInt(i64 %var11)
 	ret i64 0
 }
 	

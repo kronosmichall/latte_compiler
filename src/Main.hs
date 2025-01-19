@@ -3,7 +3,7 @@ import ErrM
 import Par
 
 import qualified LLVM
-import qualified TypeChecker
+-- import qualified TypeChecker
 import Prelude
 
 import System.Environment (getArgs)

@@ -1,14 +1,15 @@
 class list {
-    int elem;
     string s;
+    int elem;
 }
 
 
 int main() {
   list l;
   l = new list;
-  l.elem = 1;  
-  
+  l.elem = 1;
+  int x = l.elem;
+  printInt(x);
   return 0;
 }
 

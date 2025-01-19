@@ -14,7 +14,6 @@ import qualified Data.Map as Map hiding (map)
 import qualified PostProcess
 import State
 import Types
-import Data.Char (isLower)
 import Common
 
 addLabel :: String -> MyMonad ()
@@ -42,17 +41,16 @@ getValReg _ = error "Not a register"
 newVarNoInit :: MyType -> VarName -> MyMonad ()
 newVarNoInit typ name = createVar name typ
 
-setVar :: VarName -> VarVal -> MyMonad ()
-setVar name val = do
-  (reg, ref, typ) <- getVarReg name
-  newRef <- nextReg
+setVar :: VarReg -> VarVal -> MyMonad ()
+setVar (reg, ref, typ) val = do
+  newReg <- nextReg
   let instr = case val of
         VarInt x -> "store i64 " ++ show x ++ ", " ++ show typ ++ " %var" ++ show reg
         VarBool x -> "store i1 " ++ show x ++ ", " ++ show typ ++ " %var" ++ show reg
         VarString x -> error "Strings should always be references"
         VarReg (reg2, ref2, MyPtr typ2) -> do
-          let i1 = "%var" ++ show newRef ++ " = load " ++ show typ2 ++ ", " ++ show (MyPtr typ2) ++ " %var" ++ show reg2
-          let i2 = "store " ++ show typ2 ++ " %var" ++ show newRef ++ ", " ++ show typ ++ " %var" ++ show reg
+          let i1 = "%var" ++ show newReg ++ " = load " ++ show typ2 ++ ", " ++ show (MyPtr typ2) ++ " %var" ++ show reg2
+          let i2 = "store " ++ show typ2 ++ " %var" ++ show newReg ++ ", " ++ show typ ++ " %var" ++ show reg
           combineInstr [i1, i2]
         VarReg (reg2, ref2, MyStr) -> "store i8* %var" ++ show reg2 ++ ", " ++ show typ ++ " %var" ++ show reg
         VarReg (reg2, ref2, typ2) -> "store " ++ show typ2 ++ " %var" ++ show reg2 ++ ", " ++ show typ ++ " %var" ++ show reg
@@ -67,7 +65,8 @@ declareItem typ (NoInit line (Ident name)) = newVarNoInit typ name
 declareItem typ (Init line (Ident name) expr) = do
   v <- eval expr
   newVarNoInit typ name
-  setVar name v
+  varReg <- getVarReg name
+  setVar varReg v
 
 funApply :: VarName -> [VarVal] -> MyMonad VarVal
 funApply funName args = do
@@ -261,7 +260,7 @@ evalOr e1 e2 = do
       let ass = "%var" ++ show newRef ++ " = phi i1 [ " ++ lbVar ++ ", %" ++ lbl ++ "], [1, %" ++ l1 ++ "]"
       addInstr ass
       return (VarReg (newRef, 1, MyBool))
-    _ -> undefined 
+    _ -> undefined
 
 eval :: Expr -> MyMonad VarVal
 eval (EVar line (Ident name)) = do
@@ -318,6 +317,22 @@ eval (ENew _ (Class _ (Ident name))) = do
       let i2 = "%var" ++ show reg2 ++ " = call i8* @calloc(i64 1, i64 %var" ++ show reg ++ ")"
       addInstr $ combineInstr [i1, i2]
       return $ VarReg (reg2, 1, MyStruct name)
+
+eval (EAttr _ (EVar l (Ident name)) (Ident attr)) = do 
+  v1 <- eval (EVar l (Ident name))
+  v2 <- unwrap v1
+  case v2 of 
+    VarReg(reg, ref, MyStruct strName) -> do 
+      -- strName <- getVarStr name
+      shift <- getAttrShift strName attr
+      typ <- getAttrType strName attr
+      reg2 <- getRegIncrement
+      reg3 <- getRegIncrement
+      let i1 = "%var" ++ show reg2 ++ " = getelementptr  i8, i8* %var" ++ show reg ++ ", i64 " ++ show shift
+      let i2 = "%var" ++ show reg3 ++" = bitcast i8* %var" ++ show reg2 ++ " to " ++ show (typeToPtr typ)
+      addInstr $ combineInstr [i1, i2]
+      return $ VarReg (reg3, 1, typeToPtr typ)
+    _ -> undefined
 eval _ = undefined
 
 lastInstrIsRet :: MyMonad Bool
@@ -337,20 +352,24 @@ exec (BStmt _ (Block _ stmts) : xs) = do
 exec (Decl _ typ items : xs) = do
   mapM_ (declareItem (typeToMy typ)) items
   exec xs
-exec (Ass line (Ident name) expr : xs) = do
-  v <- eval expr
-  setVar name v
+exec (Ass line varExpr expr : xs) = do
+  v1 <- eval varExpr
+  v2 <- eval expr
+  case v1 of
+    VarReg reg -> do 
+      setVar reg v2
+    x -> error $ "unexpected type " ++ show x
   exec xs
-exec (Incr line (Ident name) : xs) = do
-  let e1 = EVar line (Ident name)
-  let e2 = ELitInt line 1
-  let expr = EAdd line e1 (Plus line) e2
-  exec (Ass line (Ident name) expr : xs)
-exec (Decr line (Ident name) : xs) = do
-  let e1 = EVar line (Ident name)
-  let e2 = ELitInt line 1
-  let expr = EAdd line e1 (Minus line) e2
-  exec (Ass line (Ident name) expr : xs)
+-- exec (Incr line varExpr : xs) = do
+--   let e1 = EVar line (Ident name)
+--   let e2 = ELitInt line 1
+--   let expr = EAdd line e1 (Plus line) e2
+--   exec (Ass line (Ident name) expr : xs)
+-- exec (Decr line (Ident name) : xs) = do
+--   let e1 = EVar line (Ident name)
+--   let e2 = ELitInt line 1
+--   let expr = EAdd line e1 (Minus line) e2
+--   exec (Ass line (Ident name) expr : xs)
 exec (Ret line expr : xs) = do
   v <- eval expr
   v1 <- unwrap v
@@ -433,6 +452,7 @@ exec (While line expr stmt : xs) = do
 exec (SExp _ expr : xs) = do
   tmp <- eval expr
   exec xs
+exec _ = undefined
 
 findMain :: [TopDef] -> TopDef
 findMain topdefs =
@@ -482,14 +502,52 @@ initFun (FnDef pos typ (Ident name) args block) = do
   modifyTopDefs (\(funs, cls, str) -> (Map.insert name (typ', args') funs, cls, str))
 initFun _ = return ()
 
+getVarStr :: VarName -> MyMonad String
+getVarStr name = do
+  (sts, _) <- getVars
+  case Map.lookup name sts of
+    Just (reg, ref, typ) -> case typ of 
+      MyStruct s -> return s
+      MyPtr (MyStruct s) -> return s
+      t -> error $ "Variable " ++ name ++ " is not a struct" ++ show t
+    Nothing -> error $ "Variable " ++ name ++ " not found"
 
-calculateSize :: CBlock -> Integer
-calculateSize (CBlock _ defs) = 8 * fromIntegral (length defs)
+getAttrShift :: String -> String -> MyMonad Integer
+getAttrShift strName attrName = do
+  (_, str, _) <- getTopDefs
+  let attrs = case Map.lookup strName str of
+        Just x -> x
+        Nothing -> error $ "Struct " ++ strName ++ " not found"
+  let (_, shift2) = foldl (\(found, shift) (name, typ) -> if found then (found, shift) else if name == attrName then (True, shift) else (False, shift + 1)) (False, 0) attrs
+  return $ shift2 * 8
+
+getAttrType :: String -> String -> MyMonad MyType
+getAttrType strName attrName = do
+  (_, str, _) <- getTopDefs
+  let attrs = case Map.lookup strName str of
+        Just x -> x
+        Nothing -> error $ "Struct " ++ strName ++ " not found"
+  case find (\(n , t) -> n == attrName) attrs of 
+    Just (_, typ) -> return typ
+    Nothing -> error $ "Attribute " ++ attrName ++ " not found"
+
+calcStrSize :: CBlock -> Integer
+calcStrSize (CBlock _ defs) = 8 * fromIntegral (length defs)
+
+initStrAttrs :: String -> CBlock -> MyMonad ()
+initStrAttrs strName (CBlock _ defs) = do
+  let attrs = map (\(Attr _ typ (Ident attrName)) -> (attrName, typeToMy typ)) $ filter isAttr defs
+  modifyTopDefs (\(funs, str, cls) -> (funs, Map.insert strName attrs str, cls))
+  where 
+      isAttr (Attr {}) = True
+      isAttr _ = False
 
 initStr :: TopDef -> MyMonad ()
 initStr (CTopDef _ (Ident name) (CBlock _ stmts)) = do
-  let instr = "@." ++ name ++ "size = private constant i64 " ++ show (calculateSize (CBlock BNFC'NoPosition stmts))
+  let instr = "@." ++ name ++ "size = private constant i64 " ++ show (calcStrSize (CBlock BNFC'NoPosition stmts))
   addTopInstr instr
+  initStrAttrs name (CBlock BNFC'NoPosition stmts)
+
 initStr _ = undefined
 
 topDefCode :: (Int, Int) -> String -> String
@@ -498,8 +556,8 @@ topDefCode (start, end) code = unlines $ Prelude.take (end - start) $ Prelude.dr
 getFuns :: [TopDef] -> [TopDef]
 getFuns [] = []
 getFuns (x:xs) = case x of
-  (FnDef _ _ (Ident name) _ _) ->  if name == "main" 
-                                      then getFuns xs 
+  (FnDef _ _ (Ident name) _ _) ->  if name == "main"
+                                      then getFuns xs
                                       else x : getFuns xs
   _ -> getFuns xs
 
