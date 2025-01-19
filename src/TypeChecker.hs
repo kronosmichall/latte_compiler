@@ -5,6 +5,7 @@ module TypeChecker where
 
 import Abs
 import Control.Monad.State
+    ( MonadState(put, get), State, unless, forM_, runState )
 import Data.Map hiding (map)
 import qualified Data.Map as Map hiding (map)
 import qualified Data.Set as Set
@@ -18,7 +19,7 @@ type Varname = String
 type RetType = MyType
 type HasReturn = Bool
 
-data MyType = MyInt | MyStr | MyBool | MyVoid | MyFun MyType [MyType]
+data MyType = MyInt | MyStr | MyBool | MyVoid | MyFun MyType [MyType] | MyClass String | MyStruct String
   deriving (Eq)
 
 instance Show MyType where
@@ -27,6 +28,7 @@ instance Show MyType where
   show MyBool = "Bool"
   show MyVoid = "Void"
   show (MyFun ret args) = "Fun " ++ show ret ++ " " ++ show args
+  show (MyClass name) = "Class " ++ name
 
 err :: (Show a1, Show a2) => [Char] -> Maybe (a1, a2) -> a3
 err msg (Just (l, c)) = error $ "ERROR\n    Error at line " ++ show l ++ ", column " ++ show c ++ ": " ++ msg
@@ -308,7 +310,6 @@ execTopDefError :: TopDef -> MyMonad ()
 execTopDefError (FnDef line typ (Ident name) args (Block bline stmts)) = do
   res <- execTopDef (FnDef line typ (Ident name) args (Block bline stmts))
   unless res $ err ("Function " ++ name ++ " is missing a return") line
-
 execTopDef :: TopDef -> MyMonad Bool
 execTopDef (FnDef line typ (Ident _) args (Block _ stmts)) = do
   (vars, _, _) <- get

@@ -80,12 +80,11 @@ define i64 @strlen(i8* %str) {
   %final_index = load i64, i64* %counter
   ret i64 %final_index
 }
-define i64 @main() {
-	%var1 = mul i64 2, -1
-	%var2 = mul i64 2, %var1
-	call void @printInt(i64 %var2)
+	define i64 @main() {
+	%var0 = mul i64 2, -1
+	%var1 = mul i64 2, %var0
+	call void @printInt(i64 %var1)
 	ret i64 0
-}
-
+	}
 	
 

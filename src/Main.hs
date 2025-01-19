@@ -6,8 +6,6 @@ import qualified LLVM
 import qualified TypeChecker
 import Prelude
 
-import Control.Monad.State
-import qualified Data.Map as Map
 import System.Environment (getArgs)
 import System.FilePath (replaceExtension)
 import System.Process (callCommand)
@@ -35,7 +33,7 @@ main = do
   print $ show program
 
   functions <- readFile "lib/functions.ll"
-  TypeChecker.comp program
+  -- TypeChecker.comp program
   let llFilename = replaceExtension filePath ".ll"
   let bcFilename = replaceExtension filePath ".bc"
   let programStr = functions ++ LLVM.comp program

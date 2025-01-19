@@ -80,25 +80,24 @@ define i64 @strlen(i8* %str) {
   %final_index = load i64, i64* %counter
   ret i64 %final_index
 }
-define i64 @main() {
+	define i64 @main() {
+	%var0 = alloca i64
 	%var1 = alloca i64
-	%var2 = alloca i64
-	store i64 56, i64* %var2
-	%var4 = load i64, i64* %var2
-	%var3 = add i64 %var4, 45
-	%var5 = icmp sle i64 %var3, 2
-	br i1 %var5, label %1, label %2
-; <label>:1
-	store i64 1, i64* %var1
-	br label %3
-; <label>:2
-	store i64 2, i64* %var1
-	br label %3
-; <label>:3
-	%var6 = load i64, i64* %var1
-	call void @printInt(i64 %var6)
+	store i64 56, i64* %var1
+	%var3 = load i64, i64* %var1
+	%var2 = add i64 %var3, 45
+	%var4 = icmp sle i64 %var2, 2
+	br i1 %var4, label %4true, label %4false
+	; <label>:4true
+	store i64 1, i64* %var0
+	br label %4end
+	; <label>:4false
+	store i64 2, i64* %var0
+	br label %4end
+	; <label>:4end
+	%var5 = load i64, i64* %var0
+	call void @printInt(i64 %var5)
 	ret i64 0
-}
-
+	}
 	
 

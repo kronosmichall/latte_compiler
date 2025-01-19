@@ -80,37 +80,36 @@ define i64 @strlen(i8* %str) {
   %final_index = load i64, i64* %counter
   ret i64 %final_index
 }
-define i64 @main() {
+	define i64 @main() {
+	%var0 = alloca i64
 	%var1 = alloca i64
 	%var2 = alloca i64
-	%var3 = alloca i64
-	store i64 1, i64* %var1
-	%var4 = load i64, i64* %var1
-	store i64 %var4, i64* %var2
-	store i64 5000000, i64* %var3
-	%var5 = load i64, i64* %var1
-	call void @printInt(i64 %var5)
-	br label %1
-; <label>:1
+	store i64 1, i64* %var0
+	%var3 = load i64, i64* %var0
+	store i64 %var3, i64* %var1
+	store i64 5000000, i64* %var2
+	%var4 = load i64, i64* %var0
+	call void @printInt(i64 %var4)
+	br label %Just (9,3)while
+	; <label>:Just (9,3)while
+	%var6 = load i64, i64* %var1
 	%var7 = load i64, i64* %var2
-	%var8 = load i64, i64* %var3
-	%var6 = icmp slt i64 %var7, %var8
-	br i1 %var6, label %2, label %3
-; <label>:2
-	%var9 = load i64, i64* %var2
-	call void @printInt(i64 %var9)
+	%var5 = icmp slt i64 %var6, %var7
+	br i1 %var5, label %5true, label %5false
+	; <label>:5true
+	%var8 = load i64, i64* %var1
+	call void @printInt(i64 %var8)
+	%var10 = load i64, i64* %var0
 	%var11 = load i64, i64* %var1
-	%var12 = load i64, i64* %var2
-	%var10 = add i64 %var11, %var12
-	store i64 %var10, i64* %var2
-	%var14 = load i64, i64* %var2
-	%var15 = load i64, i64* %var1
-	%var13 = sub i64 %var14, %var15
-	store i64 %var13, i64* %var1
-	br label %1
-; <label>:3
+	%var9 = add i64 %var10, %var11
+	store i64 %var9, i64* %var1
+	%var13 = load i64, i64* %var1
+	%var14 = load i64, i64* %var0
+	%var12 = sub i64 %var13, %var14
+	store i64 %var12, i64* %var0
+	br label %Just (9,3)while
+	; <label>:5false
 	ret i64 0
-}
-
+	}
 	
 

@@ -80,105 +80,105 @@ define i64 @strlen(i8* %str) {
   %final_index = load i64, i64* %counter
   ret i64 %final_index
 }
-define i64 @foo(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h, i64 %i, i64 %j, i64 %k, i64 %l, i64 %m, i64 %n) {
+	define i64 @foo(i64 %foo, i64 %foo, i64 %foo, i64 %foo, i64 %foo, i64 %foo, i64 %foo, i64 %foo, i64 %foo, i64 %foo, i64 %foo, i64 %foo, i64 %foo, i64 %foo) {
+	%var0 = alloca i64
+	store i64 %a, i64* %var0
 	%var1 = alloca i64
-	store i64 %a, i64* %var1
+	store i64 %b, i64* %var1
 	%var2 = alloca i64
-	store i64 %b, i64* %var2
+	store i64 %c, i64* %var2
 	%var3 = alloca i64
-	store i64 %c, i64* %var3
+	store i64 %d, i64* %var3
 	%var4 = alloca i64
-	store i64 %d, i64* %var4
+	store i64 %e, i64* %var4
 	%var5 = alloca i64
-	store i64 %e, i64* %var5
+	store i64 %f, i64* %var5
 	%var6 = alloca i64
-	store i64 %f, i64* %var6
+	store i64 %g, i64* %var6
 	%var7 = alloca i64
-	store i64 %g, i64* %var7
+	store i64 %h, i64* %var7
 	%var8 = alloca i64
-	store i64 %h, i64* %var8
+	store i64 %i, i64* %var8
 	%var9 = alloca i64
-	store i64 %i, i64* %var9
+	store i64 %j, i64* %var9
 	%var10 = alloca i64
-	store i64 %j, i64* %var10
+	store i64 %k, i64* %var10
 	%var11 = alloca i64
-	store i64 %k, i64* %var11
+	store i64 %l, i64* %var11
 	%var12 = alloca i64
-	store i64 %l, i64* %var12
+	store i64 %m, i64* %var12
 	%var13 = alloca i64
-	store i64 %m, i64* %var13
-	%var14 = alloca i64
-	store i64 %n, i64* %var14
-	%var16 = load i64, i64* %var1
-	%var15 = mul i64 2, %var16
-	%var18 = load i64, i64* %var2
-	%var17 = sdiv i64 %var18, 2
-	%var19 = add i64 %var15, %var17
-	%var21 = load i64, i64* %var3
-	%var20 = add i64 %var19, %var21
-	%var23 = load i64, i64* %var4
-	%var22 = add i64 %var20, %var23
-	%var25 = load i64, i64* %var5
-	%var24 = add i64 %var22, %var25
-	%var27 = load i64, i64* %var6
-	%var26 = add i64 %var24, %var27
-	%var29 = load i64, i64* %var7
-	%var28 = add i64 %var26, %var29
-	%var31 = load i64, i64* %var8
-	%var30 = add i64 %var28, %var31
-	%var33 = load i64, i64* %var9
-	%var32 = add i64 %var30, %var33
-	%var35 = load i64, i64* %var10
-	%var34 = sdiv i64 %var35, 2
-	%var36 = add i64 %var32, %var34
-	%var38 = load i64, i64* %var11
-	%var37 = add i64 %var36, %var38
-	%var40 = load i64, i64* %var12
-	%var39 = add i64 %var37, %var40
-	%var42 = load i64, i64* %var13
-	%var41 = add i64 %var39, %var42
-	%var44 = load i64, i64* %var14
-	%var43 = add i64 %var41, %var44
-	%var45 = srem i64 %var43, 10
-	%var46 = alloca i64
-	store i64 %var45, i64* %var46
-	%var47 = load i64, i64* %var46
-	call void @printInt(i64 %var47)
-	%var48 = load i64, i64* %var46
-	ret i64 %var48
-}
-
+	store i64 %n, i64* %var13
+	%var15 = load i64, i64* %var0
+	%var14 = mul i64 2, %var15
+	%var17 = load i64, i64* %var1
+	%var16 = sdiv i64 %var17, 2
+	%var18 = add i64 %var14, %var16
+	%var20 = load i64, i64* %var2
+	%var19 = add i64 %var18, %var20
+	%var22 = load i64, i64* %var3
+	%var21 = add i64 %var19, %var22
+	%var24 = load i64, i64* %var4
+	%var23 = add i64 %var21, %var24
+	%var26 = load i64, i64* %var5
+	%var25 = add i64 %var23, %var26
+	%var28 = load i64, i64* %var6
+	%var27 = add i64 %var25, %var28
+	%var30 = load i64, i64* %var7
+	%var29 = add i64 %var27, %var30
+	%var32 = load i64, i64* %var8
+	%var31 = add i64 %var29, %var32
+	%var34 = load i64, i64* %var9
+	%var33 = sdiv i64 %var34, 2
+	%var35 = add i64 %var31, %var33
+	%var37 = load i64, i64* %var10
+	%var36 = add i64 %var35, %var37
+	%var39 = load i64, i64* %var11
+	%var38 = add i64 %var36, %var39
+	%var41 = load i64, i64* %var12
+	%var40 = add i64 %var38, %var41
+	%var43 = load i64, i64* %var13
+	%var42 = add i64 %var40, %var43
+	%var44 = srem i64 %var42, 10
+	%var45 = alloca i64
+	store i64 %var44, i64* %var45
+	%var46 = load i64, i64* %var45
+	call void @printInt(i64 %var46)
+	%var47 = load i64, i64* %var45
+	ret i64 %var47
+	}
 	
 
-define i64 @main() {
+	define i64 @main() {
+	%var0 = alloca i64
+	store i64 1, i64* %var0
 	%var1 = alloca i64
-	store i64 1, i64* %var1
+	store i64 2, i64* %var1
 	%var2 = alloca i64
-	store i64 2, i64* %var2
+	store i64 1, i64* %var2
 	%var3 = alloca i64
-	store i64 1, i64* %var3
+	store i64 2, i64* %var3
 	%var4 = alloca i64
-	store i64 2, i64* %var4
+	store i64 1, i64* %var4
 	%var5 = alloca i64
-	store i64 1, i64* %var5
+	store i64 2, i64* %var5
 	%var6 = alloca i64
-	store i64 2, i64* %var6
+	store i64 1, i64* %var6
 	%var7 = alloca i64
-	store i64 1, i64* %var7
+	store i64 2, i64* %var7
 	%var8 = alloca i64
-	store i64 2, i64* %var8
+	store i64 1, i64* %var8
 	%var9 = alloca i64
-	store i64 1, i64* %var9
+	store i64 2, i64* %var9
 	%var10 = alloca i64
-	store i64 2, i64* %var10
+	store i64 1, i64* %var10
 	%var11 = alloca i64
-	store i64 1, i64* %var11
+	store i64 2, i64* %var11
 	%var12 = alloca i64
-	store i64 2, i64* %var12
+	store i64 1, i64* %var12
 	%var13 = alloca i64
-	store i64 1, i64* %var13
-	%var14 = alloca i64
-	store i64 2, i64* %var14
+	store i64 2, i64* %var13
+	%var14 = load i64, i64* %var0
 	%var15 = load i64, i64* %var1
 	%var16 = load i64, i64* %var2
 	%var17 = load i64, i64* %var3
@@ -192,10 +192,8 @@ define i64 @main() {
 	%var25 = load i64, i64* %var11
 	%var26 = load i64, i64* %var12
 	%var27 = load i64, i64* %var13
-	%var28 = load i64, i64* %var14
-%var29 = call i64 @foo(i64 %var15, i64 %var16, i64 %var17, i64 %var18, i64 %var19, i64 %var20, i64 %var21, i64 %var22, i64 %var23, i64 %var24, i64 %var25, i64 %var26, i64 %var27, i64 %var28)
-	ret i64 %var29
-}
-
+	%var28 = call i64 @foo(i64 %var14, i64 %var15, i64 %var16, i64 %var17, i64 %var18, i64 %var19, i64 %var20, i64 %var21, i64 %var22, i64 %var23, i64 %var24, i64 %var25, i64 %var26, i64 %var27)
+	ret i64 %var28
+	}
 	
 

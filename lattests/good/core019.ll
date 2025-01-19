@@ -81,55 +81,54 @@ define i64 @strlen(i8* %str) {
   ret i64 %final_index
 }
 @.str1 = private constant [4 x i8] c"foo\00"
-define i64 @main() {
+	define i64 @main() {
+	%var0 = alloca i64
+	store i64 78, i64* %var0
 	%var1 = alloca i64
-	store i64 78, i64* %var1
-	%var2 = alloca i64
-	store i64 1, i64* %var2
-	%var3 = load i64, i64* %var2
+	store i64 1, i64* %var1
+	%var2 = load i64, i64* %var1
+	call void @printInt(i64 %var2)
+	%var3 = load i64, i64* %var0
 	call void @printInt(i64 %var3)
-	%var4 = load i64, i64* %var1
-	call void @printInt(i64 %var4)
-	br label %1
-; <label>:1
-	%var6 = load i64, i64* %var1
-	%var5 = icmp sgt i64 %var6, 76
-	br i1 %var5, label %2, label %3
-; <label>:2
-	%var8 = load i64, i64* %var1
-	%var7 = sub i64 %var8, 1
-	store i64 %var7, i64* %var1
-	%var9 = load i64, i64* %var1
-	call void @printInt(i64 %var9)
-	%var11 = load i64, i64* %var1
-	%var10 = add i64 %var11, 7
-	%var12 = alloca i64
-	store i64 %var10, i64* %var12
-	%var13 = load i64, i64* %var12
+	br label %Just (8,3)while
+	; <label>:Just (8,3)while
+	%var5 = load i64, i64* %var0
+	%var4 = icmp sgt i64 %var5, 76
+	br i1 %var4, label %4true, label %4false
+	; <label>:4true
+	%var7 = load i64, i64* %var0
+	%var6 = sub i64 %var7, 1
+	store i64 %var6, i64* %var0
+	%var8 = load i64, i64* %var0
+	call void @printInt(i64 %var8)
+	%var10 = load i64, i64* %var0
+	%var9 = add i64 %var10, 7
+	%var11 = alloca i64
+	store i64 %var9, i64* %var11
+	%var12 = load i64, i64* %var11
+	call void @printInt(i64 %var12)
+	br label %Just (8,3)while
+	; <label>:4false
+	%var13 = load i64, i64* %var0
 	call void @printInt(i64 %var13)
-	br label %1
-; <label>:3
-	%var14 = load i64, i64* %var1
-	call void @printInt(i64 %var14)
-	%var16 = load i64, i64* %var1
-	%var15 = icmp sgt i64 %var16, 4
-	br i1 %var15, label %4, label %5
-; <label>:4
-	%var17 = alloca i64
-	store i64 4, i64* %var17
-	%var18 = load i64, i64* %var17
-	call void @printInt(i64 %var18)
-	br label %6
-; <label>:5
-	%var19 = call i8* @calloc(i64 4, i64 1)
-	call void @memcpy(i8* %var19, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str1, i64 0, i64 0), i64 4)
-	call void @printString(i8* %var19)
-	br label %6
-; <label>:6
-	%var20 = load i64, i64* %var1
-	call void @printInt(i64 %var20)
+	%var15 = load i64, i64* %var0
+	%var14 = icmp sgt i64 %var15, 4
+	br i1 %var14, label %14true, label %14false
+	; <label>:14true
+	%var16 = alloca i64
+	store i64 4, i64* %var16
+	%var17 = load i64, i64* %var16
+	call void @printInt(i64 %var17)
+	br label %14end
+	; <label>:14false
+	%var18 = call i8* @calloc(i64 4, i64 1)
+	call void @memcpy(i8* %var18, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str1, i64 0, i64 0), i64 4)
+	call void @printString(i8* %var18)
+	br label %14end
+	; <label>:14end
+	%var19 = load i64, i64* %var0
+	call void @printInt(i64 %var19)
 	ret i64 0
-}
-
+	}
 	
 

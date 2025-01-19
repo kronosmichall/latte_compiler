@@ -82,48 +82,45 @@ define i64 @strlen(i8* %str) {
 }
 @.str2 = private constant [5 x i8] c"NOOO\00"
 @.str1 = private constant [4 x i8] c"yes\00"
-define void @f(i64 %x, i64 %y) {
+	define void @f(void %f, void %f) {
+	%var0 = alloca i64
+	store i64 %x, i64* %var0
 	%var1 = alloca i64
-	store i64 %x, i64* %var1
-	%var2 = alloca i64
-	store i64 %y, i64* %var2
-	%var4 = load i64, i64* %var2
-	%var5 = load i64, i64* %var1
-	%var3 = icmp sgt i64 %var4, %var5
-	br i1 %var3, label %1, label %2
-; <label>:1
-	br label %3
-; <label>:2
-%var7 = call i1 @e()
-	%lbvar7 = add i1 0, %var7
-	br label %3
-; <label>:3
-	%var6 = phi i1 [ %lbvar7, %2], [1, %1]
-	br i1 %var6, label %4, label %5
-; <label>:4
-	%var8 = call i8* @calloc(i64 4, i64 1)
-	call void @memcpy(i8* %var8, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str1, i64 0, i64 0), i64 4)
-	call void @printString(i8* %var8)
-	br label %5
-; <label>:5
+	store i64 %y, i64* %var1
+	%var3 = load i64, i64* %var1
+	%var4 = load i64, i64* %var0
+	%var2 = icmp sgt i64 %var3, %var4
+	br i1 %var2, label %2true, label %2false
+	; <label>:2true
+	br label %2end
+	; <label>:2false
+	%var6 = call i1 @e()
+	%lbvar6 = add i1 0, %var6
+	br label %2end
+	; <label>:2end
+	%var5 = phi i1 [ %lbvar6, %2false], [1, %2true]
+	br i1 %var5, label %5true, label %5false
+	; <label>:5true
+	%var7 = call i8* @calloc(i64 4, i64 1)
+	call void @memcpy(i8* %var7, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str1, i64 0, i64 0), i64 4)
+	call void @printString(i8* %var7)
+	br label %5false
+	; <label>:5false
 	ret void
-}
-
+	}
 	
 
-define i1 @e() {
-	%var1 = call i8* @calloc(i64 5, i64 1)
-	call void @memcpy(i8* %var1, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str2, i64 0, i64 0), i64 5)
-	call void @printString(i8* %var1)
+	define i1 @e() {
+	%var0 = call i8* @calloc(i64 5, i64 1)
+	call void @memcpy(i8* %var0, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str2, i64 0, i64 0), i64 5)
+	call void @printString(i8* %var0)
 	ret i1 0
-}
-
+	}
 	
 
-define i64 @main() {
+	define i64 @main() {
 	call void @f(i64 1,i64 2)
 	ret i64 0
-}
-
+	}
 	
 

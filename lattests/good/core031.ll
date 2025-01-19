@@ -80,58 +80,56 @@ define i64 @strlen(i8* %str) {
   %final_index = load i64, i64* %counter
   ret i64 %final_index
 }
-define i64 @f(i64 %a, i64 %b) {
+	define i64 @f(i64 %f, i64 %f) {
+	%var0 = alloca i64
+	store i64 %a, i64* %var0
 	%var1 = alloca i64
-	store i64 %a, i64* %var1
-	%var2 = alloca i64
-	store i64 %b, i64* %var2
-	%var4 = load i64, i64* %var1
-	%var3 = icmp sgt i64 %var4, 0
-	br i1 %var3, label %2, label %1
-; <label>:1
-	br label %3
-; <label>:2
-	%var7 = load i64, i64* %var2
-	%var6 = icmp sgt i64 %var7, 0
-	%lbvar6 = add i1 0, %var6
-	br label %3
-; <label>:3
-	%var5 = phi i1 [ %lbvar6, %2], [0, %1]
-	br i1 %var5, label %4, label %5
-; <label>:4
-	br label %9
-; <label>:5
-	%var10 = load i64, i64* %var1
-	%var9 = icmp slt i64 %var10, 0
-	br i1 %var9, label %7, label %6
-; <label>:6
-	br label %8
-; <label>:7
-	%var13 = load i64, i64* %var2
-	%var12 = icmp slt i64 %var13, 0
-	%lbvar12 = add i1 0, %var12
-	br label %8
-; <label>:8
-	%var11 = phi i1 [ %lbvar12, %7], [0, %6]
+	store i64 %b, i64* %var1
+	%var3 = load i64, i64* %var0
+	%var2 = icmp sgt i64 %var3, 0
+	br i1 %var2, label %2true, label %2false
+	; <label>:2false
+	br label %2end
+	; <label>:2true
+	%var6 = load i64, i64* %var1
+	%var5 = icmp sgt i64 %var6, 0
+	%lbvar5 = add i1 0, %var5
+	br label %2end
+	; <label>:2end
+	%var4 = phi i1 [ %lbvar5, %2true], [0, %2false]
+	br i1 %var4, label %4true, label %4false
+	; <label>:4true
+	br label %4end
+	; <label>:4false
+	%var9 = load i64, i64* %var0
+	%var8 = icmp slt i64 %var9, 0
+	br i1 %var8, label %8true, label %8false
+	; <label>:8false
+	br label %8end
+	; <label>:8true
+	%var12 = load i64, i64* %var1
+	%var11 = icmp slt i64 %var12, 0
 	%lbvar11 = add i1 0, %var11
-	br label %9
-; <label>:9
-	%var8 = phi i1 [ %lbvar11, %8], [1, %4]
-	br i1 %var8, label %10, label %11
-; <label>:10
+	br label %8end
+	; <label>:8end
+	%var10 = phi i1 [ %lbvar11, %8true], [0, %8false]
+	%lbvar10 = add i1 0, %var10
+	br label %4end
+	; <label>:4end
+	%var7 = phi i1 [ %lbvar10, %8end], [1, %4true]
+	br i1 %var7, label %7true, label %7false
+	; <label>:7true
 	ret i64 7
-; <label>:11
+	; <label>:7false
 	ret i64 42
-}
-
+	}
 	
 
-define i64 @main() {
-	%var1 = mul i64 1, -1
-%var2 = call i64 @f(i64 1, i64 %var1)
-	call void @printInt(i64 %var2)
+	define i64 @main() {
+	%var0 = mul i64 1, -1
+	%var1 = call i64 @f(i64 1, i64 %var0)
+	call void @printInt(i64 %var1)
 	ret i64 0
-}
-
+	}
 	
 

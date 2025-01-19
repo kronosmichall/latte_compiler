@@ -80,26 +80,24 @@ define i64 @strlen(i8* %str) {
   %final_index = load i64, i64* %counter
   ret i64 %final_index
 }
-define void @f(i64 %a, i64 %b) {
+	define void @f(void %f, void %f) {
+	%var0 = alloca i64
+	store i64 %a, i64* %var0
 	%var1 = alloca i64
-	store i64 %a, i64* %var1
-	%var2 = alloca i64
-	store i64 %b, i64* %var2
+	store i64 %b, i64* %var1
+	%var3 = load i64, i64* %var0
 	%var4 = load i64, i64* %var1
-	%var5 = load i64, i64* %var2
-	%var3 = srem i64 %var4, %var5
-	call void @printInt(i64 %var3)
+	%var2 = srem i64 %var3, %var4
+	call void @printInt(i64 %var2)
 	ret void
-}
-
+	}
 	
 
-define i64 @main() {
+	define i64 @main() {
 	call void @f(i64 5,i64 3)
-	%var1 = mul i64 5, -1
-	call void @f(i64 %var1,i64 3)
+	%var0 = mul i64 5, -1
+	call void @f(i64 %var0,i64 3)
 	ret i64 0
-}
-
+	}
 	
 

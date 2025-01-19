@@ -1,5 +1,4 @@
 {-# LANGUAGE BlockArguments #-}
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
@@ -8,11 +7,9 @@ module LLVM where
 
 import Abs
 import Control.Monad.State
-import Data.List (find, intercalate, isInfixOf, nub, stripPrefix)
+import Data.List (find, intercalate, isInfixOf)
 import Data.List.Split (splitOn)
-import Data.Map hiding (foldl, map)
-import qualified Data.Map as Map hiding (foldl, map)
-import Data.Maybe (isJust)
+import qualified Data.Map as Map hiding (map)
 
 import qualified PostProcess
 import State
@@ -74,7 +71,7 @@ funApply :: VarName -> [VarVal] -> MyMonad VarVal
 funApply funName args = do
   (sts, reg) <- getVars
   (funs, _, _) <- getTopDefs
-  let (typ, argTypes) = case Map.lookup funName funs of
+  let (typ, _) = case Map.lookup funName funs of
         Just val' -> val'
         Nothing -> error $ "Function " ++ funName ++ " not found"
   let args2 :: [String]
@@ -134,6 +131,7 @@ getBaseType (VarBool x) = MyBool
 getBaseType (VarString x) = MyStr
 getBaseType (VarReg (_, _, MyPtr typ)) = typ
 getBaseType (VarReg (_, _, typ)) = typ
+getBaseType _ = undefined
 
 evalOp'' :: VarVal -> String -> VarVal -> MyType -> MyMonad VarVal
 evalOp'' v1 opStr v2 typ = case (v1, v2) of
@@ -212,12 +210,14 @@ evalAnd e1 e2 = do
         VarBool x -> do
           lastReg
         VarReg (reg2, ref2, _) -> return reg2
+        _ -> undefined
 
       lbl <- lastLbl
       lbVar <- lastLbVar
       let ass = "%var" ++ show newRef ++ " = phi i1 [ " ++ lbVar ++ ", %" ++ lbl ++ "], [0, %" ++ l1 ++ "]"
       addInstr ass
       return (VarReg (newRef, 1, MyBool))
+    _ -> undefined
 
 evalOr :: Expr -> Expr -> MyMonad VarVal
 evalOr e1 e2 = do
@@ -252,12 +252,14 @@ evalOr e1 e2 = do
           newRef2 <- nextReg
           return $ newRef2 - 1
         VarReg (reg2, ref2, _) -> return reg2
+        _ -> undefined
 
       lbl <- lastLbl
       lbVar <- lastLbVar
       let ass = "%var" ++ show newRef ++ " = phi i1 [ " ++ lbVar ++ ", %" ++ lbl ++ "], [1, %" ++ l1 ++ "]"
       addInstr ass
       return (VarReg (newRef, 1, MyBool))
+    _ -> undefined 
 
 eval :: Expr -> MyMonad VarVal
 eval (EVar line (Ident name)) = do
@@ -303,6 +305,7 @@ eval (ERel line e1 op e2) = do
   evalOp'' v1 opStr v2 MyBool
 eval (EAnd line e1 e2) = evalAnd e1 e2
 eval (EOr line e1 e2) = evalOr e1 e2
+eval _ = undefined
 
 lastInstrIsRet :: MyMonad Bool
 lastInstrIsRet = do
@@ -425,8 +428,9 @@ findMain topdefs =
   isMain (FnDef _ _ (Ident "main") _ _) = True
   isMain _ = False
 
-topDefHeader :: TopDef -> String
-topDefHeader (FnDef _ typ (Ident name) args _) = "define " ++ show (typeToMy typ) ++ " @" ++ name ++ "(" ++ intercalate ", " (map (\(Arg _ typ (Ident name)) -> show (typeToMy typ) ++ " %" ++ name) args) ++ ") {"
+funHeader :: TopDef -> String
+funHeader (FnDef _ typ (Ident name) args _) = "define " ++ show (typeToMy typ) ++ " @" ++ name ++ "(" ++ intercalate ", " (map (\(Arg _ _ (Ident _)) -> show (typeToMy typ) ++ " %" ++ name) args) ++ ") {"
+funHeader _ = ""
 
 initArg :: Arg -> MyMonad ()
 initArg (Arg _ typ (Ident name)) = do
@@ -441,11 +445,10 @@ initArg (Arg _ typ (Ident name)) = do
 initArgs :: [Arg] -> MyMonad ()
 initArgs = mapM_ initArg
 
-execTopDef :: TopDef -> MyMonad ()
-execTopDef topdef = do
+execFun :: TopDef -> MyMonad ()
+execFun topdef = do
   (sts, reg) <- getVars
-  let funHeader = topDefHeader topdef
-  addInstr funHeader
+  addInstr $ funHeader topdef
   case topdef of
     (FnDef line ret name args (Block _ stmts)) -> do
       initArgs args
@@ -453,28 +456,39 @@ execTopDef topdef = do
             Void _ -> stmts ++ [VRet BNFC'NoPosition]
             _ -> stmts
       exec stmts2
+    _ -> return ()
 
   putVars (sts, reg)
   addInstr "}"
   addInstr ""
   addInstr "; topdef-end"
 
-initTopDef :: TopDef -> MyMonad ()
-initTopDef (FnDef pos typ (Ident name) args block) = do
+initFun :: TopDef -> MyMonad ()
+initFun (FnDef pos typ (Ident name) args block) = do
   let typ' = typeToMy typ
-  let args' = map (\(Arg _ typ (Ident name)) -> typeToMy typ) args
+  let args' = map (\(Arg _ _ (Ident _)) -> typeToMy typ) args
   modifyTopDefs (\(funs, cls, str) -> (Map.insert name (typ', args') funs, cls, str))
+initFun _ = return ()
+
 
 topDefCode :: (Int, Int) -> String -> String
 topDefCode (start, end) code = unlines $ Prelude.take (end - start) $ Prelude.drop start $ lines code
 
+getFuns :: [TopDef] -> [TopDef]
+getFuns [] = []
+getFuns (x:xs) = case x of
+  (FnDef _ _ (Ident name) _ _) ->  if name == "main" 
+                                      then getFuns xs 
+                                      else x : getFuns xs
+  _ -> getFuns xs
+  
 execProgram :: Program -> MyMonad ()
 execProgram (Program _ topdefs) = do
-  let funs = Prelude.filter (\(FnDef _ _ (Ident name) _ _) -> name /= "main") topdefs
-  forM_ funs initTopDef
-  forM_ funs execTopDef
+  let funs = getFuns topdefs
+  forM_ funs initFun
+  forM_ funs execFun
   let main = findMain topdefs
-  execTopDef main
+  execFun main
   res <- getRes
   let res2 = PostProcess.runAll res
   putRes res2

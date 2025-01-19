@@ -1,5 +1,6 @@
 @intFormat = internal constant [6 x i8] c"%lld\0A\00"
-@strFormat = private unnamed_addr constant [14 x i8] c"runtime error\00", align 1
+@errorFormat = private unnamed_addr constant [14 x i8] c"runtime error\00", align 1
+@strFormat = private unnamed_addr constant [3 x i8] c"%s\00", align 1
 @endl = private unnamed_addr constant [2 x i8] c"\0A\00", align 1
 
 declare i64 @printf(i8*, ...)
@@ -8,6 +9,7 @@ declare i8* @malloc(i64)
 declare i8* @realloc(i8*, i64)
 declare i8* @calloc(i64, i64)
 declare void @memcpy(i8*, i8*, i64)
+declare i8 @getchar()
 
 declare void @exit()
 
@@ -28,8 +30,14 @@ define i64 @readInt() {
   ret i64 %res2
 }
 
+define i8* @readString() {
+  %res= call i8* @calloc(i64 256, i64 1)
+  %scan_res = call i64 (i8*, ...) @scanf(i8* getelementptr([3 x i8], [3 x i8]* @strFormat, i64 0, i64 0), i8* %res)
+  ret i8* %res
+}
+
 define void @error() {
-    %msg = getelementptr inbounds [14 x i8], [14 x i8]* @strFormat, i64 0, i64 0
+    %msg = getelementptr inbounds [14 x i8], [14 x i8]* @errorFormat, i64 0, i64 0
     call void @printString(i8* %msg)
     call void @exit()
     ret void
@@ -56,60 +64,4 @@ define i64 @strlen(i8* %str) {
 
   br label %1
 
-; <label>:1
-  %index = load i64, i64* %counter
-  %char_ptr = getelementptr i8, i8* %str, i64 %index
-  %char = load i8, i8* %char_ptr
-  %is_null = icmp eq i8 %char, 0
-
-  br i1 %is_null, label %3, label %2
-
-; <label>2:
-  %index2 = add i64 %index, 1
-  store i64 %index2, i64* %counter
-  br label %1
-; <label>:3
-  %final_index = load i64, i64* %counter
-  ret i64 %final_index
-}
-@.str1 = private constant [5 x i8] c"good\00"
-@.str2 = private constant [4 x i8] c"apa\00"
-define i64 @main() {
-	%var1 = alloca i64
-	store i64 4, i64* %var1
-	%var2 = icmp ne i64 1, 2
-	br i1 %var2, label %2, label %1
-; <label>:1
-	br label %6
-; <label>:2
-	%var4 = icmp ne i64 2, 3
-	br i1 %var4, label %4, label %3
-; <label>:3
-	br label %5
-; <label>:4
-	%var6 = icmp ne i64 3, 4
-	%lbvar6 = add i1 0, %var6
-	br label %5
-; <label>:5
-	%var5 = phi i1 [ %lbvar6, %4], [0, %3]
-	%lbvar5 = add i1 0, %var5
-	br label %6
-; <label>:6
-	%var3 = phi i1 [ %lbvar5, %5], [0, %1]
-	br i1 %var3, label %7, label %8
-; <label>:7
-	%var7 = call i8* @calloc(i64 5, i64 1)
-	call void @memcpy(i8* %var7, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str1, i64 0, i64 0), i64 5)
-	call void @printString(i8* %var7)
-	br label %9
-; <label>:8
-	%var8 = call i8* @calloc(i64 4, i64 1)
-	call void @memcpy(i8* %var8, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str2, i64 0, i64 0), i64 4)
-	call void @printString(i8* %var8)
-	br label %9
-; <label>:9
-	ret i64 0
-}
-
-	
-
+; <la

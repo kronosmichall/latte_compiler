@@ -80,25 +80,24 @@ define i64 @strlen(i8* %str) {
   %final_index = load i64, i64* %counter
   ret i64 %final_index
 }
-define i64 @main() {
-%var1 = call i64 @readInt()
-	%var2 = alloca i64
-	store i64 %var1, i64* %var2
-%var3 = call i8* @readString()
-	%var4 = alloca i8*
-	store i8* %var3, i8** %var4
-%var5 = call i8* @readString()
-	%var6 = alloca i8*
-	store i8* %var5, i8** %var6
-	%var8 = load i64, i64* %var2
-	%var7 = sub i64 %var8, 5
-	call void @printInt(i64 %var7)
-	%var9 = load i8*, i8** %var4
-	%var10 = load i8*, i8** %var6
-	%var11 = call i8* @concat_strings(i8* %var9, i8* %var10)
-	call void @printString(i8* %var11)
+	define i64 @main() {
+	%var0 = call i64 @readInt()
+	%var1 = alloca i64
+	store i64 %var0, i64* %var1
+	%var2 = call i8* @readString()
+	%var3 = alloca i8*
+	store i8* %var2, i8** %var3
+	%var4 = call i8* @readString()
+	%var5 = alloca i8*
+	store i8* %var4, i8** %var5
+	%var7 = load i64, i64* %var1
+	%var6 = sub i64 %var7, 5
+	call void @printInt(i64 %var6)
+	%var8 = load i8*, i8** %var3
+	%var9 = load i8*, i8** %var5
+	%var10 = call i8* @concat_strings(i8* %var8, i8* %var9)
+	call void @printString(i8* %var10)
 	ret i64 0
-}
-
+	}
 	
 
