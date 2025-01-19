@@ -12,49 +12,13 @@ import Data.List (find, intercalate, isInfixOf, nub, stripPrefix)
 import Data.List.Split (splitOn)
 import Data.Map hiding (foldl, map)
 import qualified Data.Map as Map hiding (foldl, map)
-import Data.Maybe (isJust, isNothing)
-import Debug.Trace (trace)
-import GHC.OldList (isPrefixOf)
+import Data.Maybe (isJust)
 
-type Result = [Instr]
-type Instr = String
-type Refs = Integer
-type Register = Integer
-type NextRef = Integer
-type VarMap = Map VarName VarReg
-type FunMap = Map VarName (MyType, [MyType])
+import Types
+import qualified PostProcess
+
 type MyState = (VarMap, FunMap, NextRef, Result)
 type MyMonad = State MyState
-
-type VarName = String
-data VarVal = VarString String | VarInt Integer | VarBool Integer | VarReg VarReg | VarVoid
-type VarReg = (Register, Refs, MyType)
-
-instance Show VarVal where
-  show (VarString x) = "i8* " ++ x
-  show (VarInt x) = "i64 " ++ show x
-  show (VarBool x) = "i1 " ++ show x
-  show (VarReg (reg, ref, typ)) = show typ ++ " %var" ++ show reg
-
--- show (VarTmp t) = show t
-
-data MyType = MyInt | MyStr | MyBool | MyVoid | MyPtr MyType
-  deriving (Eq)
-
-instance Show MyType where
-  show MyInt = "i64"
-  show MyStr = "i8*"
-  show MyBool = "i1"
-  show MyVoid = "void"
-  show (MyPtr typ) = show typ ++ "*"
-
--- show (MyFun ret args) = undefined
-
-typeToMy :: Type -> MyType
-typeToMy (Int _) = MyInt
-typeToMy (Str _) = MyStr
-typeToMy (Bool _) = MyBool
-typeToMy (Void _) = MyVoid
 
 -- typeToMy (Fun _ typ typs) = MyFun (typeToMy typ) (map typeToMy typs)
 
@@ -551,22 +515,14 @@ topDefCode (start, end) code = unlines $ Prelude.take (end - start) $ Prelude.dr
 
 execProgram :: Program -> MyMonad ()
 execProgram (Program _ topdefs) = do
-  -- initPrints
   let funs = Prelude.filter (\(FnDef _ _ (Ident name) _ _) -> name /= "main") topdefs
   forM_ funs initTopDef
   forM_ funs execTopDef
   let main = findMain topdefs
   execTopDef main
   (sts, fns, refs, res) <- get
-  let blocks = splitOn "; topdef-end" (unlines res)
-  let blocks2 = map lines blocks
-  let remappedBlocks = map (\b -> remapLabels (getLabelRemap b) b) blocks2
-  let res2 = concat remappedBlocks
-  let res3 = fixRets res2
-  put (sts, fns, refs, res3)
-  strMapping <- getStrMapping
-  addConstLiterals strMapping
-  replaceLiterals strMapping
+  let res2 = PostProcess.runAll res
+  put (sts, fns, refs, res2)
 
 newFunctionsMap :: FunMap
 newFunctionsMap =
@@ -580,130 +536,6 @@ newFunctionsMap =
 newState :: MyState
 newState = (Map.empty, newFunctionsMap, 1, [])
 
-getLabelRemap :: [Instr] -> Map String Integer
-getLabelRemap res = do
-  let prefix = "; <label>:"
-  let labels = Prelude.map (stripPrefix prefix) res
-  let labels2 = map (\(Just s) -> s) $ Prelude.filter (/= Nothing) labels
-  let mapp = Map.fromList $ zip labels2 [1 ..]
-  mapp
-
-remapLabels :: Map String Integer -> [Instr] -> [Instr]
-remapLabels labelMap res = map (`mapInstr` labelMap) res
-
-mapLabel :: Instr -> Map String Integer -> String
-mapLabel instr mapp = case Map.lookup instr mapp of
-  Just val -> show val
-  Nothing -> instr
-
-safeAt :: [String] -> Int -> String
-safeAt list i =
-  if length list <= i
-    then ""
-    else list !! i
-
-mapInstr :: Instr -> Map String Integer -> Instr
-mapInstr instr mapp = do
-  let br = stripPrefix "\tbr" instr
-  let label = stripPrefix "; <label>:" instr
-  let phi = "= phi" `isInfixOf` instr
-  case () of
-    _
-      | phi -> do
-          let split1 = splitOn ", %" instr
-          let p1 = head split1 ++ ", %"
-          let split2 = splitOn "]" (split1 !! 1)
-          let p2 = head split2
-          let p2mapped = mapLabel p2 mapp
-          let p3 = "]" ++ split2 !! 1
-          let split3 = splitOn "]" (split1 !! 2)
-          let p4 = head split3
-          let p4mapped = mapLabel p4 mapp
-          let p5 = "]"
-          p1 ++ p2mapped ++ p3 ++ ", %" ++ p4mapped ++ p5
-      | isJust br -> do
-          let split1 = splitOn "label %" instr
-          let p1 = head split1 ++ "label %"
-          let p2 = head $ splitOn ", " (split1 !! 1)
-          let p2mapped = mapLabel p2 mapp
-          if length split1 == 2
-            then p1 ++ p2mapped
-            else do
-              let p3 = ", label %"
-              let p4 = safeAt split1 2
-              let p4mapped = mapLabel p4 mapp
-              p1 ++ p2mapped ++ p3 ++ p4mapped
-      | isJust label -> do
-          let split1 = splitOn "; <label>:" instr
-          let p1 = "; <label>:"
-          let p2 = split1 !! 1
-          let p2mapped = mapLabel p2 mapp
-          p1 ++ p2mapped
-      | otherwise -> instr
-
-findMemCpy :: [Instr] -> [Instr]
-findMemCpy = Prelude.filter (\i -> "call void @memcpy" `isInfixOf` i)
-
-fixRets :: [Instr] -> [Instr]
-fixRets [] = []
-fixRets [x] = [x]
-fixRets (x : y : xs) = do
-  let isRet = "\tret " `isInfixOf` x
-  let isBr = "\tbr " `isInfixOf` y
-  if isRet && isBr
-    then x : fixRets xs
-    else x : fixRets (y : xs)
-
-getStrMapping :: MyMonad (Map String Integer)
-getStrMapping = do
-  (sts, funs, ref, res) <- get
-  let literals = findMemCpy res
-  let uniqliterals = nub literals
-  let mapp = Map.fromList $ zip uniqliterals [1 ..]
-  return mapp
-
-addConstLiterals :: Map String Integer -> MyMonad ()
-addConstLiterals mapp = do
-  let pairs = Map.toList mapp
-  instrs <- mapM addConstLiteral pairs
-  (sts, funs, ref, res) <- get
-  put (sts, funs, ref, instrs ++ res)
-
-getLiteral :: String -> String
-getLiteral str = do
-  let split1 = splitOn "i8]* \"" str
-  let split2 = splitOn "\"," (split1 !! 1)
-  head split2
-
-addConstLiteral :: (String, Integer) -> MyMonad String
-addConstLiteral (str, num) = do
-  let literal = getLiteral str
-  let instr = "@.str" ++ show num ++ " = private constant [" ++ show (length literal + 1) ++ " x i8] c\"" ++ literal ++ "\\00\""
-  return instr
-
-replaceLiterals :: Map String Integer -> MyMonad ()
-replaceLiterals mapp = do
-  (sts, funs, ref, res) <- get
-  instrs2 <- mapM (`replaceLiteral` mapp) res
-  put (sts, funs, ref, instrs2)
-
-replaceLiteral :: Instr -> Map String Integer -> MyMonad Instr
-replaceLiteral instr mapp = do
-  let isMemCpy = "call void @memcpy" `isInfixOf` instr
-  if isMemCpy
-    then do
-      let split1 = splitOn "i8]* \"" instr
-      let p1 = head split1 ++ "i8]* "
-      let split2 = split1 !! 1
-      let split3 = splitOn "\", " split2
-      let p2 = head split3
-      let p2mapped = case Map.lookup instr mapp of
-            Just val -> "@.str" ++ show val
-            Nothing -> error $ "String not found: " ++ instr ++ " in " ++ show mapp
-      let p3 = ", " ++ split3 !! 1
-      return $ p1 ++ p2mapped ++ p3
-    else do
-      return instr
 
 comp :: Program -> String
 comp prog = do
@@ -711,7 +543,3 @@ comp prog = do
   let ((), (_, _, _, res)) = func newState
   unlines res
 
-showSts :: MyMonad ()
-showSts = do
-  (sts, funs, ref, res) <- get
-  trace (show sts) $ return ()

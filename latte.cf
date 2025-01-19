@@ -2,9 +2,16 @@
 entrypoints Program ;
 Program.   Program ::= [TopDef] ;
 FnDef.	   TopDef ::= Type Ident "(" [Arg] ")" Block ;
+CTopDef.     TopDef ::= "class" Ident CBlock ;
+CTopExtDef.  TopDef ::= "class" Ident "extends" Ident CBlock ;
 separator nonempty TopDef "" ;
 Arg. 	   Arg ::= Type Ident;
 separator  Arg "," ;
+-- class members --------------------------------------------
+CBlock.   CBlock ::= "{" [CDef] "}";
+MthDef.    CDef ::= Type Ident "(" [Arg] ")" Block ;
+FldDef.    CDef ::= Type Ident ";" ;
+separator  CDef "" ;
 -- statements ----------------------------------------------
 Block.     Block ::= "{" [Stmt] "}" ;
 separator  Stmt "" ;
@@ -44,6 +51,10 @@ EAdd.      Expr3 ::= Expr3 AddOp Expr4 ;
 ERel.      Expr2 ::= Expr2 RelOp Expr3 ;
 EAnd.      Expr1 ::= Expr2 "&&" Expr1 ;
 EOr.       Expr ::= Expr1 "||" Expr ;
+EAttr.     Expr6 ::= Expr6 "." Ident ;
+EMet.      Expr6 ::= Expr6 "(" [Expr] ")" ;
+ENew.      Expr6 ::= "new" Type ;
+ENull.    Expr6 ::= "(" Ident ")" "null" ;
 coercions  Expr 6 ;
 separator  Expr "," ;
 -- operators -----------------------------------------------
