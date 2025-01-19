@@ -14,68 +14,34 @@ import Data.Map hiding (foldl, map)
 import qualified Data.Map as Map hiding (foldl, map)
 import Data.Maybe (isJust)
 
-import Types
 import qualified PostProcess
-
-type MyState = (VarMap, FunMap, NextRef, Result)
-type MyMonad = State MyState
-
--- typeToMy (Fun _ typ typs) = MyFun (typeToMy typ) (map typeToMy typs)
-
-addInstr :: Instr -> MyMonad ()
-addInstr instr = do
-  (sts, funs, ref, res) <- get
-  let instr2 = if length (lines instr) == 1 then ["\t" ++ instr] else map ("\t" ++) $ lines instr
-  put (sts, funs, ref, res ++ instr2)
-
-combineInstr :: [Instr] -> Instr
-combineInstr = intercalate "\n"
+import State
+import Types
 
 addLabel :: String -> MyMonad ()
 addLabel str = do
   let instr = "; <label>:" ++ str
-  (sts, funs, ref, res) <- get
-  put (sts, funs, ref, res ++ [instr])
+  addInstr instr
 
 typeToPtr :: MyType -> MyType
-typeToPtr x = MyPtr x
+typeToPtr = MyPtr
 
 createVar :: VarName -> MyType -> MyMonad ()
 createVar name typ = do
-  (sts, funs, ref, res) <- get
-  let val = (ref, 1, typeToPtr typ)
+  (sts, reg) <- getVars
+  let val = (reg, 1, typeToPtr typ)
   let instr =
-        "%var" ++ show ref ++ " = alloca " ++ show typ
+        "%var" ++ show reg ++ " = alloca " ++ show typ
 
-  put (Map.insert name val sts, funs, ref + 1, res)
+  putVars (Map.insert name val sts, reg + 1)
   addInstr instr
-
-getVarReg :: VarName -> MyMonad VarReg
-getVarReg name = do
-  (sts, funs, ref, res) <- get
-  case Map.lookup name sts of
-    Just reg -> return reg
-    Nothing -> error $ "Variable " ++ name ++ " not found"
 
 getValReg :: VarVal -> MyMonad Register
 getValReg (VarReg (reg, ref, typ)) = return reg
 getValReg _ = error "Not a register"
 
--- setVar :: VarName -> VarVal -> MyMonad ()
--- setVar name val = do
-
 newVarNoInit :: MyType -> VarName -> MyMonad ()
 newVarNoInit typ name = createVar name typ
-
-nextReg :: MyMonad Register
-nextReg = do
-  (sts, funs, ref, res) <- get
-  return ref
-
-addReg :: MyMonad ()
-addReg = do
-  (sts, funs, ref, res) <- get
-  put (sts, funs, ref + 1, res)
 
 setVar :: VarName -> VarVal -> MyMonad ()
 setVar name val = do
@@ -106,7 +72,8 @@ declareItem typ (Init line (Ident name) expr) = do
 
 funApply :: VarName -> [VarVal] -> MyMonad VarVal
 funApply funName args = do
-  (sts, funs, reg, res) <- get
+  (sts, reg) <- getVars
+  (funs, _, _) <- getTopDefs
   let (typ, argTypes) = case Map.lookup funName funs of
         Just val' -> val'
         Nothing -> error $ "Function " ++ funName ++ " not found"
@@ -120,13 +87,13 @@ funApply funName args = do
       return VarVoid
     else do
       let instr = "%var" ++ show reg ++ " = call " ++ show typ ++ " @" ++ funName ++ "(" ++ intercalate ", " args2 ++ ")"
-      put (sts, funs, reg + 1, res ++ [instr])
+      addInstr instr
+      addReg
       return (VarReg (reg, 1, typ))
 
 unwrap :: VarVal -> MyMonad VarVal
 unwrap (VarReg (reg, ref, MyPtr typ)) = do
-  newRef <- nextReg
-  addReg
+  newRef <- getRegIncrement
   let instr = "%var" ++ show newRef ++ " = load " ++ show typ ++ ", " ++ show (MyPtr typ) ++ " %var" ++ show reg
   addInstr instr
   return (VarReg (newRef, 1, typ))
@@ -146,8 +113,7 @@ evalAddStr v1 v2 = do
   v22 <- unwrap v2
   r11 <- getValReg v11
   r22 <- getValReg v22
-  newRef <- nextReg
-  addReg
+  newRef <- getRegIncrement
   let instr = "%var" ++ show newRef ++ " = call i8* @concat_strings(i8* %var" ++ show r11 ++ ", i8* %var" ++ show r22 ++ ")"
   addInstr instr
   return $ VarReg (newRef, 1, MyStr)
@@ -173,8 +139,7 @@ evalOp'' :: VarVal -> String -> VarVal -> MyType -> MyMonad VarVal
 evalOp'' v1 opStr v2 typ = case (v1, v2) of
   -- (VarInt x, VarInt y) -> return (VarInt (x + y))
   (_, _) -> do
-    newRef <- nextReg
-    addReg
+    newRef <- getRegIncrement
     s1 <- evalVarStr v1
     s2 <- evalVarStr v2
     let typ2 = getBaseType v1
@@ -191,8 +156,7 @@ evalStr :: String -> MyMonad VarVal
 evalStr str = do
   let len = length str + 1
   let strTyp = "[" ++ show len ++ " x i8]"
-  ref <- nextReg
-  addReg
+  ref <- getRegIncrement
   let i1 = "%var" ++ show ref ++ " = call i8* @calloc(i64 " ++ show len ++ ", i64 1)"
   let i2 = "call void @memcpy(i8* %var" ++ show ref ++ ", i8* getelementptr inbounds (" ++ strTyp ++ ", " ++ strTyp ++ "* " ++ show str ++ ", i64 0, i64 0), i64 " ++ show len ++ ")"
   addInstr $ combineInstr [i1, i2]
@@ -200,21 +164,21 @@ evalStr str = do
 
 lastLbVar :: MyMonad String
 lastLbVar = do
-  (_, _, _, res) <- get
+  res <- getRes
   let res2 = reverse res
   let lblstr = find (\s -> "%lbvar" `isInfixOf` s) res2
   let numstr = case lblstr of
         Just s -> head (splitOn " =" s)
         Nothing -> error "Label not found"
-  return $ (splitOn "\t" numstr) !! 1
+  return $ splitOn "\t" numstr !! 1
 
 lastLbl :: MyMonad String
 lastLbl = do
-  (_, _, _, res) <- get
+  res <- getRes
   let res2 = reverse res
   let lbls = Prelude.take 2 [x | x <- res2, "; <label>:" `isInfixOf` x]
   let lbl2 = lbls !! 1
-  return $ (splitOn "; <label>:" lbl2) !! 1
+  return $ splitOn "; <label>:" lbl2 !! 1
 
 evalAnd :: Expr -> Expr -> MyMonad VarVal
 evalAnd e1 e2 = do
@@ -224,8 +188,7 @@ evalAnd e1 e2 = do
     VarBool 0 -> return $ VarBool 0
     VarBool 1 -> return v11
     VarReg (reg, ref, _) -> do
-      newRef <- nextReg
-      addReg
+      newRef <- getRegIncrement
       let l1 = show reg ++ "false"
       let l2 = show reg ++ "true"
       let l3 = show reg ++ "end"
@@ -238,8 +201,7 @@ evalAnd e1 e2 = do
       v22 <- unwrap v2
       case v22 of
         VarBool x -> do
-          newRef2 <- nextReg
-          addReg
+          newRef2 <- getRegIncrement
           addInstr $ "%lbvar" ++ show newRef2 ++ " = add i1 0, " ++ show x
         VarReg (reg2, ref2, _) -> do
           addInstr $ "%lbvar" ++ show reg2 ++ " = add i1 0, %var" ++ show reg2
@@ -248,8 +210,7 @@ evalAnd e1 e2 = do
       addLabel l3
       newRef22 <- case v22 of
         VarBool x -> do
-          newRef2 <- nextReg
-          return $ newRef2 - 1
+          lastReg
         VarReg (reg2, ref2, _) -> return reg2
 
       lbl <- lastLbl
@@ -266,8 +227,7 @@ evalOr e1 e2 = do
     VarBool 0 -> eval e2
     VarBool 1 -> return $ VarBool 1
     VarReg (reg, ref, _) -> do
-      newRef <- nextReg
-      addReg
+      newRef <- getRegIncrement
       let l1 = show reg ++ "true"
       let l2 = show reg ++ "false"
       let l3 = show reg ++ "end"
@@ -280,8 +240,7 @@ evalOr e1 e2 = do
       v22 <- unwrap v2
       case v22 of
         VarBool x -> do
-          newRef2 <- nextReg
-          addReg
+          newRef2 <- getRegIncrement
           addInstr $ "%lbvar" ++ show newRef2 ++ " = add i1 0, " ++ show x
         VarReg (reg2, ref2, _) -> do
           addInstr $ "%lbvar" ++ show reg2 ++ " = add i1 0, %var" ++ show reg2
@@ -345,11 +304,6 @@ eval (ERel line e1 op e2) = do
 eval (EAnd line e1 e2) = evalAnd e1 e2
 eval (EOr line e1 e2) = evalOr e1 e2
 
-lastInstr :: MyMonad Instr
-lastInstr = do
-  (_, _, _, res) <- get
-  return $ last res
-
 lastInstrIsRet :: MyMonad Bool
 lastInstrIsRet = do
   instr <- lastInstr
@@ -359,10 +313,10 @@ exec :: [Stmt] -> MyMonad ()
 exec [] = return ()
 exec (Empty _ : xs) = exec xs
 exec (BStmt _ (Block _ stmts) : xs) = do
-  (sts, funs, ref, res) <- get
+  (sts, reg) <- getVars
   exec stmts
-  (_, funs2, ref2, res2) <- get
-  put (sts, funs2, ref2, res2)
+  (sts2, reg2) <- getVars
+  putVars (sts, reg2)
   exec xs
 exec (Decl _ typ items : xs) = do
   mapM_ (declareItem (typeToMy typ)) items
@@ -479,8 +433,8 @@ initArg (Arg _ typ (Ident name)) = do
   let oldTyp = typeToMy typ
   let newTyp = typeToPtr oldTyp
   newVarNoInit oldTyp name
-  (sts, funs, ref, res) <- get
-  let instr = "store " ++ show oldTyp ++ " %" ++ name ++ ", " ++ show newTyp ++ " %var" ++ show (ref - 1)
+  (sts, reg) <- getVars
+  let instr = "store " ++ show oldTyp ++ " %" ++ name ++ ", " ++ show newTyp ++ " %var" ++ show (reg - 1)
   addInstr instr
 
 -- modify (\(sts, funs,  ref,  res) -> (Map.insert name (ref, 1) sts, funs, ref + 1,  res))
@@ -489,9 +443,9 @@ initArgs = mapM_ initArg
 
 execTopDef :: TopDef -> MyMonad ()
 execTopDef topdef = do
+  (sts, reg) <- getVars
   let funHeader = topDefHeader topdef
-  (sts, funs, ref, res) <- get
-  put (sts, funs, ref, res ++ [funHeader])
+  addInstr funHeader
   case topdef of
     (FnDef line ret name args (Block _ stmts)) -> do
       initArgs args
@@ -500,15 +454,16 @@ execTopDef topdef = do
             _ -> stmts
       exec stmts2
 
-  (sts', funs', ref', res') <- get
-  put (sts, funs', ref, res' ++ ["}", ""])
+  putVars (sts, reg)
+  addInstr "}"
+  addInstr ""
   addInstr "; topdef-end"
 
 initTopDef :: TopDef -> MyMonad ()
 initTopDef (FnDef pos typ (Ident name) args block) = do
   let typ' = typeToMy typ
   let args' = map (\(Arg _ typ (Ident name)) -> typeToMy typ) args
-  modify (\(sts, funs, ref, res) -> (sts, Map.insert name (typ', args') funs, ref, res))
+  modifyTopDefs (\(funs, cls, str) -> (Map.insert name (typ', args') funs, cls, str))
 
 topDefCode :: (Int, Int) -> String -> String
 topDefCode (start, end) code = unlines $ Prelude.take (end - start) $ Prelude.drop start $ lines code
@@ -520,9 +475,9 @@ execProgram (Program _ topdefs) = do
   forM_ funs execTopDef
   let main = findMain topdefs
   execTopDef main
-  (sts, fns, refs, res) <- get
+  res <- getRes
   let res2 = PostProcess.runAll res
-  put (sts, fns, refs, res2)
+  putRes res2
 
 newFunctionsMap :: FunMap
 newFunctionsMap =
@@ -533,13 +488,11 @@ newFunctionsMap =
           Map.insert "error" (MyVoid, []) $
             Map.insert "main" (MyInt, []) Map.empty
 
-newState :: MyState
-newState = (Map.empty, newFunctionsMap, 1, [])
-
+newState2 :: MyState
+newState2 = newState (newFunctionsMap, Map.empty, Map.empty)
 
 comp :: Program -> String
 comp prog = do
   let func = runState (execProgram prog)
-  let ((), (_, _, _, res)) = func newState
+  let ((), (_, _, res, _)) = func newState2
   unlines res
-

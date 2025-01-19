@@ -7,7 +7,7 @@
 {-# LANGUAGE OverlappingInstances #-}
 #endif
 
--- | Pretty-printer for Print.
+-- | Pretty-printer for 
 
 module Print where
 
@@ -146,8 +146,6 @@ instance Print (Abs.Program' a) where
 instance Print (Abs.TopDef' a) where
   prt i = \case
     Abs.FnDef _ type_ id_ args block -> prPrec i 0 (concatD [prt 0 type_, prt 0 id_, doc (showString "("), prt 0 args, doc (showString ")"), prt 0 block])
-    Abs.CTopDef _ id_ cblock -> prPrec i 0 (concatD [doc (showString "class"), prt 0 id_, prt 0 cblock])
-    Abs.CTopExtDef _ id_1 id_2 cblock -> prPrec i 0 (concatD [doc (showString "class"), prt 0 id_1, doc (showString "extends"), prt 0 id_2, prt 0 cblock])
 
 instance Print [Abs.TopDef' a] where
   prt _ [] = concatD []
@@ -162,19 +160,6 @@ instance Print [Abs.Arg' a] where
   prt _ [] = concatD []
   prt _ [x] = concatD [prt 0 x]
   prt _ (x:xs) = concatD [prt 0 x, doc (showString ","), prt 0 xs]
-
-instance Print (Abs.CBlock' a) where
-  prt i = \case
-    Abs.CBlock _ cdefs -> prPrec i 0 (concatD [doc (showString "{"), prt 0 cdefs, doc (showString "}")])
-
-instance Print (Abs.CDef' a) where
-  prt i = \case
-    Abs.MthDef _ type_ id_ args block -> prPrec i 0 (concatD [prt 0 type_, prt 0 id_, doc (showString "("), prt 0 args, doc (showString ")"), prt 0 block])
-    Abs.FldDef _ type_ id_ -> prPrec i 0 (concatD [prt 0 type_, prt 0 id_, doc (showString ";")])
-
-instance Print [Abs.CDef' a] where
-  prt _ [] = concatD []
-  prt _ (x:xs) = concatD [prt 0 x, prt 0 xs]
 
 instance Print (Abs.Block' a) where
   prt i = \case
@@ -215,7 +200,6 @@ instance Print (Abs.Type' a) where
     Abs.Str _ -> prPrec i 0 (concatD [doc (showString "string")])
     Abs.Bool _ -> prPrec i 0 (concatD [doc (showString "boolean")])
     Abs.Void _ -> prPrec i 0 (concatD [doc (showString "void")])
-    Abs.Class _ id_ -> prPrec i 0 (concatD [prt 0 id_])
     Abs.Fun _ type_ types -> prPrec i 0 (concatD [prt 0 type_, doc (showString "("), prt 0 types, doc (showString ")")])
 
 instance Print [Abs.Type' a] where
@@ -238,10 +222,6 @@ instance Print (Abs.Expr' a) where
     Abs.ERel _ expr1 relop expr2 -> prPrec i 2 (concatD [prt 2 expr1, prt 0 relop, prt 3 expr2])
     Abs.EAnd _ expr1 expr2 -> prPrec i 1 (concatD [prt 2 expr1, doc (showString "&&"), prt 1 expr2])
     Abs.EOr _ expr1 expr2 -> prPrec i 0 (concatD [prt 1 expr1, doc (showString "||"), prt 0 expr2])
-    Abs.EAttr _ expr id_ -> prPrec i 6 (concatD [prt 6 expr, doc (showString "."), prt 0 id_])
-    Abs.EMet _ expr exprs -> prPrec i 6 (concatD [prt 6 expr, doc (showString "("), prt 0 exprs, doc (showString ")")])
-    Abs.ENew _ type_ -> prPrec i 6 (concatD [doc (showString "new"), prt 0 type_])
-    Abs.ENull _ id_ -> prPrec i 6 (concatD [doc (showString "("), prt 0 id_, doc (showString ")"), doc (showString "null")])
 
 instance Print [Abs.Expr' a] where
   prt _ [] = concatD []

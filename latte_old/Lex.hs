@@ -3,7 +3,7 @@
 {-# OPTIONS_GHC -fno-warn-unused-binds #-}
 {-# OPTIONS_GHC -fno-warn-unused-imports #-}
 {-# LANGUAGE CPP #-}
-{-# LINE 4 "latte/Lex.x" #-}
+{-# LINE 4 "Lex.x" #-}
 {-# OPTIONS -fno-warn-incomplete-patterns #-}
 {-# OPTIONS_GHC -w #-}
 
@@ -32,8 +32,8 @@ alex_base = Data.Array.listArray (0 :: Int, 55)
   , -32
   , -36
   , -31
-  , 0
-  , -46
+  , -109
+  , -45
   , 317
   , 461
   , 0
@@ -71,7 +71,7 @@ alex_base = Data.Array.listArray (0 :: Int, 55)
   , 0
   , 0
   , 0
-  , -108
+  , 0
   , 3123
   , 3337
   , 2979
@@ -89,17 +89,17 @@ alex_table = Data.Array.listArray (0 :: Int, 3833)
   , 4
   , 4
   , 4
-  , 9
-  , 9
+  , 48
+  , 48
   , 4
   , 4
   , 4
   , 4
   , 4
   , 50
-  , 9
-  , 9
-  , 9
+  , 48
+  , 48
+  , 48
   , 0
   , 37
   , 0
@@ -112,16 +112,16 @@ alex_table = Data.Array.listArray (0 :: Int, 3833)
   , 23
   , 27
   , 0
-  , 9
+  , 48
   , 6
   , 4
-  , 9
-  , 9
-  , 9
+  , 48
+  , 48
+  , 48
   , 7
-  , 9
+  , 48
   , 8
-  , 9
+  , 0
   , 5
   , 25
   , 25
@@ -134,7 +134,7 @@ alex_table = Data.Array.listArray (0 :: Int, 3833)
   , 25
   , 25
   , 0
-  , 9
+  , 48
   , 10
   , 10
   , 10
@@ -198,9 +198,9 @@ alex_table = Data.Array.listArray (0 :: Int, 3833)
   , 12
   , 12
   , 12
-  , 9
   , 48
   , 9
+  , 48
   , 51
   , -1
   , -1
@@ -3936,8 +3936,8 @@ alex_check = Data.Array.listArray (0 :: Int, 3833)
   , 13
   , 42
   , 45
-  , 61
   , 124
+  , 61
   , -1
   , 47
   , -1
@@ -3959,7 +3959,7 @@ alex_check = Data.Array.listArray (0 :: Int, 3833)
   , 43
   , 44
   , 45
-  , 46
+  , -1
   , 47
   , 48
   , 49
@@ -7827,46 +7827,46 @@ alex_accept = Data.Array.listArray (0 :: Int, 55)
   , AlexAccNone
   , AlexAcc 6
   , AlexAcc 5
+  , AlexAccNone
   , AlexAcc 4
+  , AlexAccNone
   , AlexAcc 3
   , AlexAccNone
+  , AlexAccNone
+  , AlexAccNone
+  , AlexAccNone
+  , AlexAccNone
+  , AlexAccNone
+  , AlexAccNone
+  , AlexAccNone
+  , AlexAccNone
+  , AlexAccNone
+  , AlexAccNone
   , AlexAcc 2
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
   , AlexAcc 1
+  , AlexAccNone
+  , AlexAccSkip
+  , AlexAccNone
+  , AlexAccNone
+  , AlexAccNone
+  , AlexAccNone
+  , AlexAccNone
+  , AlexAccNone
+  , AlexAccNone
+  , AlexAccNone
+  , AlexAccNone
+  , AlexAccSkip
+  , AlexAccNone
+  , AlexAccNone
+  , AlexAccNone
+  , AlexAccNone
+  , AlexAccNone
+  , AlexAccNone
+  , AlexAccNone
+  , AlexAccNone
+  , AlexAccNone
+  , AlexAccSkip
   , AlexAcc 0
-  , AlexAccNone
-  , AlexAccSkip
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccSkip
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccSkip
-  , AlexAccNone
   , AlexAccNone
   , AlexAccNone
   , AlexAccNone
@@ -7881,10 +7881,10 @@ alex_actions = Data.Array.array (0 :: Int, 8)
   , (6,alex_action_4)
   , (5,alex_action_4)
   , (4,alex_action_4)
-  , (3,alex_action_4)
-  , (2,alex_action_5)
-  , (1,alex_action_6)
-  , (0,alex_action_7)
+  , (3,alex_action_5)
+  , (2,alex_action_6)
+  , (1,alex_action_7)
+  , (0,alex_action_4)
   ]
 
 alex_action_4 = tok (eitherResIdent TV)
@@ -8124,7 +8124,7 @@ alexRightContext IBOX(sc) user__ _ _ input__ =
         -- match when checking the right context, just
         -- the first match will do.
 #endif
-{-# LINE 63 "latte/Lex.x" #-}
+{-# LINE 63 "Lex.x" #-}
 -- | Create a token with position.
 tok :: (String -> Tok) -> (Posn -> String -> Token)
 tok f p = PT p . f
@@ -8225,22 +8225,21 @@ eitherResIdent tv s = treeFind resWords
 -- | The keywords and symbols of the language organized as binary search tree.
 resWords :: BTree
 resWords =
-  b ">" 20
-    (b "," 10
+  b "=" 17
+    (b "++" 9
        (b "(" 5
           (b "%" 3 (b "!=" 2 (b "!" 1 N N) N) (b "&&" 4 N N))
-          (b "+" 8 (b "*" 7 (b ")" 6 N N) N) (b "++" 9 N N)))
-       (b ";" 15
-          (b "." 13 (b "--" 12 (b "-" 11 N N) N) (b "/" 14 N N))
-          (b "=" 18 (b "<=" 17 (b "<" 16 N N) N) (b "==" 19 N N))))
-    (b "null" 30
-       (b "extends" 25
-          (b "class" 23 (b "boolean" 22 (b ">=" 21 N N) N) (b "else" 24 N N))
-          (b "int" 28 (b "if" 27 (b "false" 26 N N) N) (b "new" 29 N N)))
-       (b "while" 35
-          (b "true" 33
-             (b "string" 32 (b "return" 31 N N) N) (b "void" 34 N N))
-          (b "||" 37 (b "{" 36 N N) (b "}" 38 N N))))
+          (b "*" 7 (b ")" 6 N N) (b "+" 8 N N)))
+       (b "/" 13
+          (b "-" 11 (b "," 10 N N) (b "--" 12 N N))
+          (b "<" 15 (b ";" 14 N N) (b "<=" 16 N N))))
+    (b "return" 26
+       (b "else" 22
+          (b ">=" 20 (b ">" 19 (b "==" 18 N N) N) (b "boolean" 21 N N))
+          (b "if" 24 (b "false" 23 N N) (b "int" 25 N N)))
+       (b "while" 30
+          (b "true" 28 (b "string" 27 N N) (b "void" 29 N N))
+          (b "||" 32 (b "{" 31 N N) (b "}" 33 N N))))
   where
   b s n = B bs (TS bs n)
     where

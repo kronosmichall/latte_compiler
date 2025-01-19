@@ -1,34 +1,11 @@
-//int two() {
-//    return 2;
-//}
-//
-//int three() {
-//    int a = 2;
-//    return a + 1;
-//}
-//
-//int four() {
-//    int a = 4;
-//    return a;
-//}
-//
-//int five() {
-//    int x = 2;
-//    x = x + 3;
-//    return x;
-//}
-//
-//int id(int x) {
-//    return x;
-//}
+class list {
+    int elem;
+    string s;
+}
+
 
 int main() {
-  int x = 4;
-  if (1 != 2 && 2 != 3 && 3 != 4) {
-    printString("good");
-  } else {
-    printString("apa");
-  }
+  list l;
 
   return 0;
 }

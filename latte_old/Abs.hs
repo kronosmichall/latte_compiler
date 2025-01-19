@@ -6,7 +6,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 
--- | The abstract syntax of language latte.
+-- | The abstract syntax of language 
 
 module Abs where
 
@@ -23,24 +23,11 @@ data Program' a = Program a [TopDef' a]
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type TopDef = TopDef' BNFC'Position
-data TopDef' a
-    = FnDef a (Type' a) Ident [Arg' a] (Block' a)
-    | CTopDef a Ident (CBlock' a)
-    | CTopExtDef a Ident Ident (CBlock' a)
+data TopDef' a = FnDef a (Type' a) Ident [Arg' a] (Block' a)
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type Arg = Arg' BNFC'Position
 data Arg' a = Arg a (Type' a) Ident
-  deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
-
-type CBlock = CBlock' BNFC'Position
-data CBlock' a = CBlock a [CDef' a]
-  deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
-
-type CDef = CDef' BNFC'Position
-data CDef' a
-    = MthDef a (Type' a) Ident [Arg' a] (Block' a)
-    | FldDef a (Type' a) Ident
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type Block = Block' BNFC'Position
@@ -69,12 +56,7 @@ data Item' a = NoInit a Ident | Init a Ident (Expr' a)
 
 type Type = Type' BNFC'Position
 data Type' a
-    = Int a
-    | Str a
-    | Bool a
-    | Void a
-    | Class a Ident
-    | Fun a (Type' a) [Type' a]
+    = Int a | Str a | Bool a | Void a | Fun a (Type' a) [Type' a]
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type Expr = Expr' BNFC'Position
@@ -92,10 +74,6 @@ data Expr' a
     | ERel a (Expr' a) (RelOp' a) (Expr' a)
     | EAnd a (Expr' a) (Expr' a)
     | EOr a (Expr' a) (Expr' a)
-    | EAttr a (Expr' a) Ident
-    | EMet a (Expr' a) [Expr' a]
-    | ENew a (Type' a)
-    | ENull a Ident
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type AddOp = AddOp' BNFC'Position
@@ -135,21 +113,10 @@ instance HasPosition Program where
 instance HasPosition TopDef where
   hasPosition = \case
     FnDef p _ _ _ _ -> p
-    CTopDef p _ _ -> p
-    CTopExtDef p _ _ _ -> p
 
 instance HasPosition Arg where
   hasPosition = \case
     Arg p _ _ -> p
-
-instance HasPosition CBlock where
-  hasPosition = \case
-    CBlock p _ -> p
-
-instance HasPosition CDef where
-  hasPosition = \case
-    MthDef p _ _ _ _ -> p
-    FldDef p _ _ -> p
 
 instance HasPosition Block where
   hasPosition = \case
@@ -181,7 +148,6 @@ instance HasPosition Type where
     Str p -> p
     Bool p -> p
     Void p -> p
-    Class p _ -> p
     Fun p _ _ -> p
 
 instance HasPosition Expr where
@@ -199,10 +165,6 @@ instance HasPosition Expr where
     ERel p _ _ _ -> p
     EAnd p _ _ -> p
     EOr p _ _ -> p
-    EAttr p _ _ -> p
-    EMet p _ _ -> p
-    ENew p _ -> p
-    ENull p _ -> p
 
 instance HasPosition AddOp where
   hasPosition = \case

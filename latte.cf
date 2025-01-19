@@ -35,6 +35,7 @@ Int.       Type ::= "int" ;
 Str.       Type ::= "string" ;
 Bool.      Type ::= "boolean" ;
 Void.      Type ::= "void" ;
+Class.     Type ::= Ident ; 
 internal   Fun. Type ::= Type "(" [Type] ")" ;
 separator  Type "," ;
 -- Expressions ---------------------------------------------
