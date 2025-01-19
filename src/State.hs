@@ -59,6 +59,16 @@ addInstr instr = do
   let instr2 = if length (lines instr) == 1 then ["\t" ++ instr] else map ("\t" ++) $ lines instr
   modifyRes (++ instr2)
 
+addNoTabInstr :: Instr -> MyMonad ()
+addNoTabInstr instr = do
+  let instr2 = if length (lines instr) == 1 then [instr] else lines instr
+  modifyRes (++ instr2)
+
+addTopInstr :: Instr -> MyMonad ()
+addTopInstr instr = do
+  let instr2 = if length (lines instr) == 1 then [ instr] else lines instr
+  modifyRes (instr2 ++)
+  
 combineInstr :: [Instr] -> Instr
 combineInstr = intercalate "\n"
 

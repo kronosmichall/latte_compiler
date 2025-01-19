@@ -14,6 +14,8 @@ import qualified Data.Map as Map hiding (map)
 import qualified PostProcess
 import State
 import Types
+import Data.Char (isLower)
+import Common
 
 addLabel :: String -> MyMonad ()
 addLabel str = do
@@ -305,6 +307,17 @@ eval (ERel line e1 op e2) = do
   evalOp'' v1 opStr v2 MyBool
 eval (EAnd line e1 e2) = evalAnd e1 e2
 eval (EOr line e1 e2) = evalOr e1 e2
+eval (ENew _ (Class _ (Ident name))) = do
+  if capitalised name
+    then do
+      undefined
+    else do
+      reg <- getRegIncrement
+      reg2 <- getRegIncrement
+      let i1 = "%var" ++ show reg ++ "= load i64, i64* @." ++ name ++ "size"
+      let i2 = "%var" ++ show reg2 ++ " = call i8* @calloc(i64 1, i64 %var" ++ show reg ++ ")"
+      addInstr $ combineInstr [i1, i2]
+      return $ VarReg (reg2, 1, MyStruct name)
 eval _ = undefined
 
 lastInstrIsRet :: MyMonad Bool
@@ -441,14 +454,13 @@ initArg (Arg _ typ (Ident name)) = do
   let instr = "store " ++ show oldTyp ++ " %" ++ name ++ ", " ++ show newTyp ++ " %var" ++ show (reg - 1)
   addInstr instr
 
--- modify (\(sts, funs,  ref,  res) -> (Map.insert name (ref, 1) sts, funs, ref + 1,  res))
 initArgs :: [Arg] -> MyMonad ()
 initArgs = mapM_ initArg
 
 execFun :: TopDef -> MyMonad ()
 execFun topdef = do
   (sts, reg) <- getVars
-  addInstr $ funHeader topdef
+  addNoTabInstr $ funHeader topdef
   case topdef of
     (FnDef line ret name args (Block _ stmts)) -> do
       initArgs args
@@ -459,8 +471,8 @@ execFun topdef = do
     _ -> return ()
 
   putVars (sts, reg)
-  addInstr "}"
-  addInstr ""
+  addNoTabInstr "}"
+  addNoTabInstr ""
   addInstr "; topdef-end"
 
 initFun :: TopDef -> MyMonad ()
@@ -470,6 +482,15 @@ initFun (FnDef pos typ (Ident name) args block) = do
   modifyTopDefs (\(funs, cls, str) -> (Map.insert name (typ', args') funs, cls, str))
 initFun _ = return ()
 
+
+calculateSize :: CBlock -> Integer
+calculateSize (CBlock _ defs) = 8 * fromIntegral (length defs)
+
+initStr :: TopDef -> MyMonad ()
+initStr (CTopDef _ (Ident name) (CBlock _ stmts)) = do
+  let instr = "@." ++ name ++ "size = private constant i64 " ++ show (calculateSize (CBlock BNFC'NoPosition stmts))
+  addTopInstr instr
+initStr _ = undefined
 
 topDefCode :: (Int, Int) -> String -> String
 topDefCode (start, end) code = unlines $ Prelude.take (end - start) $ Prelude.drop start $ lines code
@@ -481,9 +502,18 @@ getFuns (x:xs) = case x of
                                       then getFuns xs 
                                       else x : getFuns xs
   _ -> getFuns xs
-  
+
+getStrDef :: [TopDef] -> [TopDef]
+getStrDef [] = []
+getStrDef (x:xs) = case x of
+  (CTopDef _ (Ident name) _ ) -> if capitalised name then getStrDef xs else x : getStrDef xs
+  _ -> getStrDef xs
+
+
 execProgram :: Program -> MyMonad ()
 execProgram (Program _ topdefs) = do
+  let strs = getStrDef topdefs
+  forM_ strs initStr
   let funs = getFuns topdefs
   forM_ funs initFun
   forM_ funs execFun

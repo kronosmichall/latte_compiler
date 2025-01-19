@@ -10,7 +10,7 @@ separator  Arg "," ;
 -- class members --------------------------------------------
 CBlock.   CBlock ::= "{" [CDef] "}";
 MthDef.    CDef ::= Type Ident "(" [Arg] ")" Block ;
-FldDef.    CDef ::= Type Ident ";" ;
+Attr.    CDef ::= Type Ident ";" ;
 separator  CDef "" ;
 -- statements ----------------------------------------------
 Block.     Block ::= "{" [Stmt] "}" ;

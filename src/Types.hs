@@ -1,7 +1,7 @@
 module Types where
 
 import Abs
-
+import Common
 import Data.Map hiding (foldl, map)
 
 -- type Attributes = [VarReg]
@@ -20,8 +20,10 @@ type FunName = String
 type AttrName = String
 type ParentClass = String
 type Memsize = Integer
-type ClassMap = Map VarName (ParentClass, Memsize, [FunName], [AttrName])
-type StructMap = Map VarName (Memsize, [AttrName])
+type MemShift = Integer
+type Attr = (VarName, MyType)
+type ClassMap = Map VarName (ParentClass, [FunName], [Attr])
+type StructMap = Map VarName [Attr]
 
 type VarName = String
 data VarVal = VarString String | VarInt Integer | VarBool Integer | VarReg VarReg | VarVoid
@@ -33,7 +35,7 @@ instance Show VarVal where
   show (VarInt x) = "i64 " ++ show x
   show (VarBool x) = "i1 " ++ show x
   show (VarReg (reg, ref, typ)) = show typ ++ " %var" ++ show reg
-
+  show _ = undefined
 -- show (VarTmp t) = show t
 
 data MyType = MyInt | MyStr | MyBool | MyVoid | MyPtr MyType | MyClass String | MyStruct String
@@ -45,6 +47,7 @@ instance Show MyType where
   show MyBool = "i1"
   show MyVoid = "void"
   show (MyPtr typ) = show typ ++ "*"
+  show _ = "i8*"
 
 -- show (MyFun ret args) = undefined
 
@@ -53,3 +56,5 @@ typeToMy (Int _) = MyInt
 typeToMy (Str _) = MyStr
 typeToMy (Bool _) = MyBool
 typeToMy (Void _) = MyVoid
+typeToMy (Class _ (Ident name)) = if capitalised name then MyClass name else MyStruct name
+typeToMy _ = undefined

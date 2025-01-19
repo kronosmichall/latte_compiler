@@ -6,7 +6,9 @@ class list {
 
 int main() {
   list l;
-
+  l = new list;
+  l.elem = 1;  
+  
   return 0;
 }
 

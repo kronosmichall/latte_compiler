@@ -64,4 +64,29 @@ define i64 @strlen(i8* %str) {
 
   br label %1
 
-; <la
+; <label>:1
+  %index = load i64, i64* %counter
+  %char_ptr = getelementptr i8, i8* %str, i64 %index
+  %char = load i8, i8* %char_ptr
+  %is_null = icmp eq i8 %char, 0
+
+  br i1 %is_null, label %3, label %2
+
+; <label>2:
+  %index2 = add i64 %index, 1
+  store i64 %index2, i64* %counter
+  br label %1
+; <label>:3
+  %final_index = load i64, i64* %counter
+  ret i64 %final_index
+}
+@.listsize = private constant i64 16
+define i64 @main() {
+	%var0 = alloca i8*
+	%var1= load i64, i64* @.listsize
+	%var2 = call i8* @calloc(i64 1, i64 %var1)
+	store i8* %var2, i8** %var0
+	ret i64 0
+}
+	
+

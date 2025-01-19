@@ -40,7 +40,7 @@ data CBlock' a = CBlock a [CDef' a]
 type CDef = CDef' BNFC'Position
 data CDef' a
     = MthDef a (Type' a) Ident [Arg' a] (Block' a)
-    | FldDef a (Type' a) Ident
+    | Attr a (Type' a) Ident
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type Block = Block' BNFC'Position
@@ -149,7 +149,7 @@ instance HasPosition CBlock where
 instance HasPosition CDef where
   hasPosition = \case
     MthDef p _ _ _ _ -> p
-    FldDef p _ _ -> p
+    Attr p _ _ -> p
 
 instance HasPosition Block where
   hasPosition = \case

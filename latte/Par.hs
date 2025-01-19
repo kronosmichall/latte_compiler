@@ -1328,7 +1328,7 @@ happyReduction_16 _
 	(HappyAbsSyn4  happy_var_2)
 	(HappyAbsSyn20  happy_var_1)
 	 =  HappyAbsSyn13
-		 ((fst happy_var_1, Abs.FldDef (fst happy_var_1) (snd happy_var_1) (snd happy_var_2))
+		 ((fst happy_var_1, Abs.Attr (fst happy_var_1) (snd happy_var_1) (snd happy_var_2))
 	)
 happyReduction_16 _ _ _  = notHappyAtAll 
 

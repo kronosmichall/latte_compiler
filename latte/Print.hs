@@ -170,7 +170,7 @@ instance Print (Abs.CBlock' a) where
 instance Print (Abs.CDef' a) where
   prt i = \case
     Abs.MthDef _ type_ id_ args block -> prPrec i 0 (concatD [prt 0 type_, prt 0 id_, doc (showString "("), prt 0 args, doc (showString ")"), prt 0 block])
-    Abs.FldDef _ type_ id_ -> prPrec i 0 (concatD [prt 0 type_, prt 0 id_, doc (showString ";")])
+    Abs.Attr _ type_ id_ -> prPrec i 0 (concatD [prt 0 type_, prt 0 id_, doc (showString ";")])
 
 instance Print [Abs.CDef' a] where
   prt _ [] = concatD []
