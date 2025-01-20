@@ -19,7 +19,7 @@ import Common
 addLabel :: String -> MyMonad ()
 addLabel str = do
   let instr = "; <label>:" ++ str
-  addInstr instr
+  addNoTabInstr instr
 
 typeToPtr :: MyType -> MyType
 typeToPtr = MyPtr
@@ -494,7 +494,7 @@ execFun topdef = do
   putVars (sts, reg)
   addNoTabInstr "}"
   addNoTabInstr ""
-  addInstr "; topdef-end"
+  addNoTabInstr "; topdef-end"
 
 initFun :: TopDef -> MyMonad ()
 initFun (FnDef pos typ (Ident name) args block) = do
