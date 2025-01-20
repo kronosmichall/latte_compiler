@@ -27,7 +27,8 @@ typeToPtr = MyPtr
 createVar :: VarName -> MyType -> MyMonad Integer
 createVar name typ = do
   (sts, reg) <- getVars
-  let val = (reg, 1, typeToPtr typ)
+  refID <- getRefIDIncrement
+  let val = (reg, refID, typeToPtr typ)
   let instr =
         "%var" ++ show reg ++ " = alloca " ++ show typ
 
@@ -48,7 +49,6 @@ createVarSetNull name typ = do
     _ -> return ()
 
 
-
 getValReg :: VarVal -> MyMonad Register
 getValReg (VarReg (reg, ref, typ)) = return reg
 getValReg _ = error "Not a register"
@@ -57,22 +57,28 @@ newVarNoInit :: MyType -> VarName -> MyMonad ()
 newVarNoInit typ name = createVarSetNull name typ
 
 setVar :: VarReg -> VarVal -> MyMonad ()
-setVar (reg, ref, typ) val = do
+setVar (reg, refID, typ) val = do
   newReg <- nextReg
   let instr = case val of
         VarInt x -> "store i64 " ++ show x ++ ", " ++ show typ ++ " %var" ++ show reg
         VarBool x -> "store i1 " ++ show x ++ ", " ++ show typ ++ " %var" ++ show reg
         VarString x -> error "Strings should always be references"
-        VarReg (reg2, ref2, MyPtr typ2) -> do
+        VarReg (reg2, refID2, MyPtr typ2) -> do
           let i1 = "%var" ++ show newReg ++ " = load " ++ show typ2 ++ ", " ++ show (MyPtr typ2) ++ " %var" ++ show reg2
           let i2 = "store " ++ show typ2 ++ " %var" ++ show newReg ++ ", " ++ show typ ++ " %var" ++ show reg
           combineInstr [i1, i2]
-        VarReg (reg2, ref2, MyStr) -> "store i8* %var" ++ show reg2 ++ ", " ++ show typ ++ " %var" ++ show reg
-        VarReg (reg2, ref2, typ2) -> "store " ++ show typ2 ++ " %var" ++ show reg2 ++ ", " ++ show typ ++ " %var" ++ show reg
+        VarReg (reg2, refID2, MyStr) -> "store i8* %var" ++ show reg2 ++ ", " ++ show typ ++ " %var" ++ show reg
+        VarReg (reg2, refID2, typ2) -> "store " ++ show typ2 ++ " %var" ++ show reg2 ++ ", " ++ show typ ++ " %var" ++ show reg
         _ -> error "Unsupported type"
   addInstr instr
   case val of
-    VarReg (reg2, ref2, MyPtr typ2) -> addReg
+    VarReg (reg2, refID2, MyPtr typ2) -> do
+      addReg
+    _ -> return ()
+  case val of
+    VarReg (_, refID2, _) -> do
+      addRef refID2
+      subRef refID
     _ -> return ()
 
 declareItem :: MyType -> Item -> MyMonad ()
@@ -102,14 +108,16 @@ funApply funName args = do
       let instr = "%var" ++ show reg ++ " = call " ++ show typ ++ " @" ++ funName ++ "(" ++ intercalate ", " args2 ++ ")"
       addInstr instr
       addReg
-      return (VarReg (reg, 1, typ))
+      refID <- getRefIDIncrement
+      addRef refID
+      return (VarReg (reg, refID, typ))
 
 unwrap :: VarVal -> MyMonad VarVal
 unwrap (VarReg (reg, ref, MyPtr typ)) = do
   newRef <- getRegIncrement
   let instr = "%var" ++ show newRef ++ " = load " ++ show typ ++ ", " ++ show (MyPtr typ) ++ " %var" ++ show reg
   addInstr instr
-  return (VarReg (newRef, 1, typ))
+  return (VarReg (newRef, ref, typ))
 unwrap x = return x
 
 evalOp :: Expr' BNFC'Position -> String -> Expr' BNFC'Position -> MyMonad VarVal
@@ -129,7 +137,9 @@ evalAddStr v1 v2 = do
   newRef <- getRegIncrement
   let instr = "%var" ++ show newRef ++ " = call i8* @concat_strings(i8* %var" ++ show r11 ++ ", i8* %var" ++ show r22 ++ ")"
   addInstr instr
-  return $ VarReg (newRef, 1, MyStr)
+  refID <- getRefIDIncrement
+  addRef refID
+  return $ VarReg (newRef, refID, MyStr)
 
 evalVarStr :: VarVal -> MyMonad String
 evalVarStr (VarInt x) = return $ show x
@@ -173,8 +183,9 @@ evalStr str = do
   ref <- getRegIncrement
   let i1 = "%var" ++ show ref ++ " = call i8* @calloc(i64 " ++ show len ++ ", i64 1)"
   let i2 = "call void @memcpy(i8* %var" ++ show ref ++ ", i8* getelementptr inbounds (" ++ strTyp ++ ", " ++ strTyp ++ "* " ++ show str ++ ", i64 0, i64 0), i64 " ++ show len ++ ")"
-  addInstr $ combineInstr [i1, i2]
-  return $ VarReg (ref, 1, MyStr)
+  refID <- getRefIDIncrement
+  addRef refID
+  return $ VarReg (ref, refID, MyStr)
 
 lastLbVar :: MyMonad String
 lastLbVar = do
@@ -322,16 +333,17 @@ eval (ERel line e1 op e2) = do
 eval (EAnd line e1 e2) = evalAnd e1 e2
 eval (EOr line e1 e2) = evalOr e1 e2
 eval (ENew _ (Class _ (Ident name))) = do
-  if capitalised name -- classes
-    then do
-      undefined
-    else do -- structs
-      reg <- getRegIncrement
-      reg2 <- getRegIncrement
-      let i1 = "%var" ++ show reg ++ "= load i64, i64* @." ++ name ++ "size"
-      let i2 = "%var" ++ show reg2 ++ " = call i8* @calloc(i64 1, i64 %var" ++ show reg ++ ")"
-      addInstr $ combineInstr [i1, i2]
-      return $ VarReg (reg2, 1, MyStruct name)
+  let typ = if capitalised name
+      then  MyClass name
+      else  MyStruct name
+  reg <- getRegIncrement
+  reg2 <- getRegIncrement
+  let i1 = "%var" ++ show reg ++ "= load i64, i64* @." ++ name ++ "size"
+  let i2 = "%var" ++ show reg2 ++ " = call i8* @calloc(i64 1, i64 %var" ++ show reg ++ ")"
+  addInstr $ combineInstr [i1, i2]
+  refID <- getRefIDIncrement
+  addRef refID
+  return $ VarReg (reg2, refID, typ)
 
 eval (EAttr _ e (Ident attr)) = do
   v1 <- eval e
@@ -345,7 +357,9 @@ eval (EAttr _ e (Ident attr)) = do
       let i1 = "%var" ++ show reg2 ++ " = getelementptr  i8, i8* %var" ++ show reg ++ ", i64 " ++ show shift
       let i2 = "%var" ++ show reg3 ++" = bitcast i8* %var" ++ show reg2 ++ " to " ++ show (typeToPtr typ)
       addInstr $ combineInstr [i1, i2]
-      return $ VarReg (reg3, 1, typeToPtr typ)
+      refID <- getRefIDIncrement
+      addRef refID
+      return $ VarReg (reg3, refID, typeToPtr typ)
     _ -> undefined
 
 eval (ENull _ (Ident cls)) = do
@@ -357,8 +371,7 @@ eval (ENull _ (Ident cls)) = do
   let i1 = "%var" ++ show reg ++ " = alloca i8*"
   let i2 = "store i8* null, i8** %var" ++ show reg
   addInstr $ combineInstr [i1, i2]
-  return $ VarReg (reg, 1, typ)
-
+  return $ VarReg (reg, -1, typ)
 
 eval x = error $ show x
 
@@ -367,6 +380,28 @@ lastInstrIsRet = do
   instr <- lastInstr
   return $ "\tret " `isInfixOf` instr
 
+freeIDs :: [RefID] -> MyMonad ()
+freeIDs refIDs = do
+  (sts, _) <- getVars
+  let vars = Map.toList sts
+  let regs = map snd vars
+  let toFree = filter (\(_, ref, _) -> ref `elem` refIDs) regs
+  let toFree2 = filter (\(_, ref, typ) -> "i8*" `isInfixOf` show typ) regs
+  varVals <- mapM (\(reg, ref, typ) -> unwrap (VarReg (reg, ref, typ))) toFree2
+  let instrs = map (\(VarReg (reg, ref, typ)) -> "call void @free (i8* %var" ++ show reg ++ ")") varVals
+  addInstr $ combineInstr instrs
+
+closeVars :: VarMap-> VarMap -> MyMonad ()
+closeVars mold mnew = do
+  let keys = Map.keys mold
+  let keys2 = Map.keys mnew
+  let keys3 = filter (`notElem` keys2) keys
+  let ids = map (\k -> case Map.lookup k mold of
+        Just (_, ref, _) -> ref
+        Nothing -> error "Variable not found") keys3
+  forM_ ids $ \i -> do
+    subRef i
+
 exec :: [Stmt] -> MyMonad ()
 exec [] = return ()
 exec (Empty _ : xs) = exec xs
@@ -374,6 +409,10 @@ exec (BStmt _ (Block _ stmts) : xs) = do
   (sts, reg) <- getVars
   exec stmts
   (sts2, reg2) <- getVars
+  closeVars sts2 sts
+  idsToFree <- getIDsToFree
+  freeIDs idsToFree
+  cleanIDsToFree
   putVars (sts, reg2)
   exec xs
 exec (Decl _ typ items : xs) = do
@@ -558,7 +597,28 @@ getAttrType strName attrName = do
     Nothing -> error $ "Attribute " ++ attrName ++ " not found"
 
 calcStrSize :: CBlock -> Integer
-calcStrSize (CBlock _ defs) = 8 * fromIntegral (length defs)
+calcStrSize (CBlock _ defs) = do
+  let attrs = filter isAttr defs
+  8 * fromIntegral (length attrs)
+
+isAttr :: CDef' a -> Bool
+isAttr (Attr {}) = True
+isAttr _ = False
+
+initClsAttrs :: String -> CBlock -> MyMonad ()
+initClsAttrs clsName (CBlock _ defs) = do
+  let attrs = map (\(Attr _ typ (Ident attrName)) -> (attrName, typeToMy typ)) $ filter isAttr defs
+  let clsVal = (clsName, [], attrs) -- if does not extend then parentClass == self
+  modifyTopDefs (\(funs, str, cls) -> (funs, str, Map.insert clsName clsVal cls))
+
+
+initCls :: TopDef -> MyMonad ()
+initCls (CTopDef _ (Ident name) (CBlock _ stmts)) = do
+  let instr = "@." ++ name ++ "size = private constant i64 " ++ show (calcStrSize (CBlock BNFC'NoPosition stmts))
+  addTopInstr instr
+  initClsAttrs name (CBlock BNFC'NoPosition stmts)
+initCls _ = undefined
+
 
 initStrAttrs :: String -> CBlock -> MyMonad ()
 initStrAttrs strName (CBlock _ defs) = do
@@ -573,7 +633,6 @@ initStr (CTopDef _ (Ident name) (CBlock _ stmts)) = do
   let instr = "@." ++ name ++ "size = private constant i64 " ++ show (calcStrSize (CBlock BNFC'NoPosition stmts))
   addTopInstr instr
   initStrAttrs name (CBlock BNFC'NoPosition stmts)
-
 initStr _ = undefined
 
 topDefCode :: (Int, Int) -> String -> String
@@ -593,11 +652,18 @@ getStrDef (x:xs) = case x of
   (CTopDef _ (Ident name) _ ) -> if capitalised name then getStrDef xs else x : getStrDef xs
   _ -> getStrDef xs
 
+getClsDef :: [TopDef] -> [TopDef]
+getClsDef [] = []
+getClsDef (x:xs) = case x of
+  (CTopDef _ (Ident name) _ ) -> if capitalised name then x : getClsDef xs else getClsDef xs
+  _ -> getClsDef xs
 
 execProgram :: Program -> MyMonad ()
 execProgram (Program _ topdefs) = do
   let strs = getStrDef topdefs
   forM_ strs initStr
+  let cls = getClsDef topdefs
+  forM_ cls initCls
   let funs = getFuns topdefs
   forM_ funs initFun
   forM_ funs execFun

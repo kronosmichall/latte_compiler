@@ -7,14 +7,14 @@ import Data.List (intercalate)
 
 type VarState = (VarMap, NextRef)
 type TopDefState = (FunMap, StructMap, ClassMap)
-type RefState = Map.Map RefID RefCount
+type RefState = (RefID, Map.Map RefID RefCount)
 type MyState = (VarState, TopDefState, [Instr], RefState)
 type MyMonad = State MyState
 
 newState :: TopDefState -> MyState
 newState topDefs = do
   let vars = (Map.empty, 0)
-  let refs = Map.empty
+  let refs = (1, Map.empty)
   let res = []
   (vars, topDefs, res, refs)
   
@@ -41,6 +41,24 @@ getRes = gets (\(_, _, r, _) -> r)
 
 getRefs :: MyMonad RefState
 getRefs = gets (\(_, _, _, ref) -> ref)
+
+getRefIDIncrement :: MyMonad RefID
+getRefIDIncrement = do
+  (refID, mapp) <- getRefs
+  modifyRefs (\(refID, mapp) -> (refID + 1, mapp))
+  return refID
+
+addRef :: RefID -> MyMonad ()
+addRef refID = do
+  (ref, mapp) <- getRefs
+  modifyRefs (\(ref, mapp) -> (ref, Map.insertWith (+) refID 1 mapp))
+
+subRef :: RefID -> MyMonad ()
+subRef refID = do
+  (ref, mapp) <- getRefs
+  modifyRefs (\(ref, mapp) -> (ref, Map.update (\count -> if count > 1 then Just (count - 1) else Nothing) refID mapp))
+
+
 
 putVars :: VarState -> MyMonad ()
 putVars vars = modify (\(_, t, r, ref) -> (vars, t, r, ref))
@@ -103,3 +121,15 @@ lastReg = do
 lastInstr :: MyMonad Instr
 lastInstr = do
   last <$> getRes
+
+getIDsToFree :: MyMonad [RefID]
+getIDsToFree = do
+  (ref, mapp) <- getRefs
+  let keys = Map.keys $ Map.filter (== 0) mapp
+  return $ filter (>= 1) keys
+
+cleanIDsToFree :: MyMonad ()
+cleanIDsToFree = do
+  (ref, mapp) <- getRefs
+  let mapp2 = Map.filter (> 0) mapp
+  putRefs (ref, mapp2)

@@ -30,7 +30,6 @@ main = do
   let filePath = head args
   codeStr <- readFile filePath
   let program = getProgram codeStr
-  print $ show program
 
   functions <- readFile "lib/functions.ll"
   -- TypeChecker.comp program
