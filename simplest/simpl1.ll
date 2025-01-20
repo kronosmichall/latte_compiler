@@ -80,40 +80,59 @@ define i64 @strlen(i8* %str) {
   %final_index = load i64, i64* %counter
   ret i64 %final_index
 }
-@.str2 = private constant [5 x i8] c"good\00"
-@.str1 = private constant [4 x i8] c"bad\00"
 @.listsize = private constant i64 16
+define i8* @append(i8* %xs) {
+	%var0 = alloca i8*
+	store i8* null, i8** %var0
+	store i8* %xs, i8** %var0
+	%var1= load i64, i64* @.listsize
+	%var2 = call i8* @calloc(i64 1, i64 %var1)
+	%var3 = alloca i8*
+	store i8* %var2, i8** %var3
+	%var4 = load i8*, i8** %var3
+	%var5 = getelementptr  i8, i8* %var4, i64 8
+	%var6 = bitcast i8* %var5 to i64*
+	%var7 = load i8*, i8** %var0
+	%var8 = getelementptr  i8, i8* %var7, i64 8
+	%var9 = bitcast i8* %var8 to i64*
+	%var11 = load i64, i64* %var9
+	%var10 = add i64 %var11, 1
+	store i64 %var10, i64* %var6
+	%var12 = load i8*, i8** %var0
+	%var13 = getelementptr  i8, i8* %var12, i64 0
+	%var14 = bitcast i8* %var13 to i8**
+	%var15 = load i8*, i8** %var3
+	store i8* %var15, i8** %var14
+	%var16 = load i8*, i8** %var3
+	ret i8* %var16
+}
+
 define i64 @main() {
 	%var0= load i64, i64* @.listsize
 	%var1 = call i8* @calloc(i64 1, i64 %var0)
 	%var2 = alloca i8*
 	store i8* %var1, i8** %var2
-	%var3 = alloca i8*
-	store i8* null, i8** %var3
-	%var4 = alloca i8*
-	store i8* null, i8** %var4
+	%var3 = load i8*, i8** %var2
+	%var4 = getelementptr  i8, i8* %var3, i64 8
+	%var5 = bitcast i8* %var4 to i64*
+	store i64 1, i64* %var5
 	%var6 = load i8*, i8** %var2
-	%var7 = load i8*, i8** %var4
-	%var5 = icmp eq i8* %var6, %var7
-	br i1 %var5, label %1, label %2
-; <label>:1
-	%var8 = call i8* @calloc(i64 4, i64 1)
-	call void @memcpy(i8* %var8, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str1, i64 0, i64 0), i64 4)
-	call void @printString(i8* %var8)
-	br label %2
-; <label>:2
-	%var9 = alloca i8*
-	store i8* null, i8** %var9
-	%var11 = load i8*, i8** %var3
-	%var12 = load i8*, i8** %var9
-	%var10 = icmp eq i8* %var11, %var12
-	br i1 %var10, label %3, label %4
-; <label>:3
-	%var13 = call i8* @calloc(i64 5, i64 1)
-	call void @memcpy(i8* %var13, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str2, i64 0, i64 0), i64 5)
-	call void @printString(i8* %var13)
-	br label %4
-; <label>:4
+	%var7 = call i8* @append(i8* %var6)
+	%var8 = alloca i8*
+	store i8* %var7, i8** %var8
+	%var9 = load i8*, i8** %var8
+	%var10 = getelementptr  i8, i8* %var9, i64 8
+	%var11 = bitcast i8* %var10 to i64*
+	%var12 = load i64, i64* %var11
+	call void @printInt(i64 %var12)
+	%var13 = load i8*, i8** %var2
+	%var14 = getelementptr  i8, i8* %var13, i64 0
+	%var15 = bitcast i8* %var14 to i8**
+	%var16 = load i8*, i8** %var15
+	%var17 = getelementptr  i8, i8* %var16, i64 8
+	%var18 = bitcast i8* %var17 to i64*
+	%var19 = load i64, i64* %var18
+	call void @printInt(i64 %var19)
 	ret i64 0
 }
 

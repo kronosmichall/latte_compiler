@@ -84,7 +84,7 @@ define i64 @strlen(i8* %str) {
 @.str3 = private constant [9 x i8] c"hello */\00"
 @.str4 = private constant [9 x i8] c"/* world\00"
 @.str1 = private constant [1 x i8] c"\00"
-	define i64 @fac(i64 %fac) {
+define i64 @fac(i64 %a) {
 	%var0 = alloca i64
 	store i64 %a, i64* %var0
 	%var1 = alloca i64
@@ -92,12 +92,12 @@ define i64 @strlen(i8* %str) {
 	store i64 1, i64* %var1
 	%var3 = load i64, i64* %var0
 	store i64 %var3, i64* %var2
-	br label %Just (28,9)while
-	; <label>:Just (28,9)while
+	br label %1
+; <label>:1
 	%var5 = load i64, i64* %var2
 	%var4 = icmp sgt i64 %var5, 0
-	br i1 %var4, label %4true, label %4false
-	; <label>:4true
+	br i1 %var4, label %2, label %3
+; <label>:2
 	%var7 = load i64, i64* %var1
 	%var8 = load i64, i64* %var2
 	%var6 = mul i64 %var7, %var8
@@ -105,77 +105,72 @@ define i64 @strlen(i8* %str) {
 	%var10 = load i64, i64* %var2
 	%var9 = sub i64 %var10, 1
 	store i64 %var9, i64* %var2
-	br label %Just (28,9)while
-	; <label>:4false
+	br label %1
+; <label>:3
 	%var11 = load i64, i64* %var1
 	ret i64 %var11
-	}
-	
+}
 
-	define i64 @rfac(i64 %rfac) {
+define i64 @rfac(i64 %n) {
 	%var0 = alloca i64
 	store i64 %n, i64* %var0
 	%var2 = load i64, i64* %var0
 	%var1 = icmp eq i64 %var2, 0
-	br i1 %var1, label %1true, label %1false
-	; <label>:1true
+	br i1 %var1, label %1, label %2
+; <label>:1
 	ret i64 1
-	; <label>:1false
+; <label>:2
 	%var4 = load i64, i64* %var0
 	%var3 = sub i64 %var4, 1
 	%var5 = call i64 @rfac(i64 %var3)
 	%var7 = load i64, i64* %var0
 	%var6 = mul i64 %var7, %var5
 	ret i64 %var6
-	}
-	
+}
 
-	define i64 @mfac(i64 %mfac) {
+define i64 @mfac(i64 %n) {
 	%var0 = alloca i64
 	store i64 %n, i64* %var0
 	%var2 = load i64, i64* %var0
 	%var1 = icmp eq i64 %var2, 0
-	br i1 %var1, label %1true, label %1false
-	; <label>:1true
+	br i1 %var1, label %1, label %2
+; <label>:1
 	ret i64 1
-	; <label>:1false
+; <label>:2
 	%var4 = load i64, i64* %var0
 	%var3 = sub i64 %var4, 1
 	%var5 = call i64 @nfac(i64 %var3)
 	%var7 = load i64, i64* %var0
 	%var6 = mul i64 %var7, %var5
 	ret i64 %var6
-	}
-	
+}
 
-	define i64 @nfac(i64 %nfac) {
+define i64 @nfac(i64 %n) {
 	%var0 = alloca i64
 	store i64 %n, i64* %var0
 	%var2 = load i64, i64* %var0
 	%var1 = icmp ne i64 %var2, 0
-	br i1 %var1, label %1true, label %1false
-	; <label>:1true
+	br i1 %var1, label %1, label %2
+; <label>:1
 	%var4 = load i64, i64* %var0
 	%var3 = sub i64 %var4, 1
 	%var5 = call i64 @mfac(i64 %var3)
 	%var7 = load i64, i64* %var0
 	%var6 = mul i64 %var5, %var7
 	ret i64 %var6
-	; <label>:1false
+; <label>:2
 	ret i64 1
-	}
-	
+}
 
-	define i64 @ifac(i64 %ifac) {
+define i64 @ifac(i64 %n) {
 	%var0 = alloca i64
 	store i64 %n, i64* %var0
 	%var1 = load i64, i64* %var0
 	%var2 = call i64 @ifac2f(i64 1, i64 %var1)
 	ret i64 %var2
-	}
-	
+}
 
-	define i64 @ifac2f(i64 %ifac2f, i64 %ifac2f) {
+define i64 @ifac2f(i64 %l, i64 %h) {
 	%var0 = alloca i64
 	store i64 %l, i64* %var0
 	%var1 = alloca i64
@@ -183,18 +178,18 @@ define i64 @strlen(i8* %str) {
 	%var3 = load i64, i64* %var0
 	%var4 = load i64, i64* %var1
 	%var2 = icmp eq i64 %var3, %var4
-	br i1 %var2, label %2true, label %2false
-	; <label>:2true
+	br i1 %var2, label %1, label %2
+; <label>:1
 	%var5 = load i64, i64* %var0
 	ret i64 %var5
-	; <label>:2false
+; <label>:2
 	%var7 = load i64, i64* %var0
 	%var8 = load i64, i64* %var1
 	%var6 = icmp sgt i64 %var7, %var8
-	br i1 %var6, label %6true, label %6false
-	; <label>:6true
+	br i1 %var6, label %3, label %4
+; <label>:3
 	ret i64 1
-	; <label>:6false
+; <label>:4
 	%var9 = alloca i64
 	%var11 = load i64, i64* %var0
 	%var12 = load i64, i64* %var1
@@ -210,10 +205,9 @@ define i64 @strlen(i8* %str) {
 	%var20 = call i64 @ifac2f(i64 %var17, i64 %var19)
 	%var21 = mul i64 %var16, %var20
 	ret i64 %var21
-	}
-	
+}
 
-	define i8* @repStr(i8* %repStr, i8* %repStr) {
+define i8* @repStr(i8* %s, i64 %n) {
 	%var0 = alloca i8*
 	store i8* %s, i8** %var0
 	%var1 = alloca i64
@@ -224,13 +218,13 @@ define i64 @strlen(i8* %str) {
 	store i8* %var2, i8** %var3
 	%var4 = alloca i64
 	store i64 0, i64* %var4
-	br label %Just (71,3)while
-	; <label>:Just (71,3)while
+	br label %1
+; <label>:1
 	%var6 = load i64, i64* %var4
 	%var7 = load i64, i64* %var1
 	%var5 = icmp slt i64 %var6, %var7
-	br i1 %var5, label %5true, label %5false
-	; <label>:5true
+	br i1 %var5, label %2, label %3
+; <label>:2
 	%var8 = load i8*, i8** %var3
 	%var9 = load i8*, i8** %var0
 	%var10 = call i8* @concat_strings(i8* %var8, i8* %var9)
@@ -238,14 +232,13 @@ define i64 @strlen(i8* %str) {
 	%var12 = load i64, i64* %var4
 	%var11 = add i64 %var12, 1
 	store i64 %var11, i64* %var4
-	br label %Just (71,3)while
-	; <label>:5false
+	br label %1
+; <label>:3
 	%var13 = load i8*, i8** %var3
 	ret i8* %var13
-	}
-	
+}
 
-	define i64 @main() {
+define i64 @main() {
 	%var0 = call i64 @fac(i64 10)
 	call void @printInt(i64 %var0)
 	%var1 = call i64 @rfac(i64 10)
@@ -259,12 +252,12 @@ define i64 @strlen(i8* %str) {
 	store i64 10, i64* %var5
 	%var6 = alloca i64
 	store i64 1, i64* %var6
-	br label %Just (10,11)while
-	; <label>:Just (10,11)while
+	br label %1
+; <label>:1
 	%var8 = load i64, i64* %var5
 	%var7 = icmp sgt i64 %var8, 0
-	br i1 %var7, label %7true, label %7false
-	; <label>:7true
+	br i1 %var7, label %2, label %3
+; <label>:2
 	%var10 = load i64, i64* %var6
 	%var11 = load i64, i64* %var5
 	%var9 = mul i64 %var10, %var11
@@ -272,8 +265,8 @@ define i64 @strlen(i8* %str) {
 	%var13 = load i64, i64* %var5
 	%var12 = sub i64 %var13, 1
 	store i64 %var12, i64* %var5
-	br label %Just (10,11)while
-	; <label>:7false
+	br label %1
+; <label>:3
 	%var14 = load i64, i64* %var6
 	call void @printInt(i64 %var14)
 	%var15 = call i8* @calloc(i64 2, i64 1)
@@ -287,6 +280,5 @@ define i64 @strlen(i8* %str) {
 	call void @memcpy(i8* %var18, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str4, i64 0, i64 0), i64 9)
 	call void @printString(i8* %var18)
 	ret i64 0
-	}
-	
+}
 

@@ -83,132 +83,129 @@ define i64 @strlen(i8* %str) {
 @.str1 = private constant [5 x i8] c"true\00"
 @.str2 = private constant [6 x i8] c"false\00"
 @.str3 = private constant [4 x i8] c"apa\00"
-	define i1 @dontCallMe(i1 %dontCallMe) {
+define i1 @dontCallMe(i64 %x) {
 	%var0 = alloca i64
 	store i64 %x, i64* %var0
 	%var1 = load i64, i64* %var0
 	call void @printInt(i64 %var1)
 	ret i1 1
-	}
-	
+}
 
-	define void @printBool(void %printBool) {
+define void @printBool(i1 %b) {
 	%var0 = alloca i1
 	store i1 %b, i1* %var0
 	%var1 = load i1, i1* %var0
-	br i1 %var1, label %1true, label %1false
-	; <label>:1true
+	br i1 %var1, label %1, label %2
+; <label>:1
 	%var2 = call i8* @calloc(i64 5, i64 1)
 	call void @memcpy(i8* %var2, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str1, i64 0, i64 0), i64 5)
 	call void @printString(i8* %var2)
-	br label %1end
-	; <label>:1false
+	br label %3
+; <label>:2
 	%var3 = call i8* @calloc(i64 6, i64 1)
 	call void @memcpy(i8* %var3, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str2, i64 0, i64 0), i64 6)
 	call void @printString(i8* %var3)
-	br label %1end
-	; <label>:1end
+	br label %3
+; <label>:3
 	ret void
-	}
-	
+}
 
-	define i1 @implies(i1 %implies, i1 %implies) {
+define i1 @implies(i1 %x, i1 %y) {
 	%var0 = alloca i1
 	store i1 %x, i1* %var0
 	%var1 = alloca i1
 	store i1 %y, i1* %var1
 	%var3 = load i1, i1* %var0
 	%var2 = xor i1 %var3, 1
-	br i1 %var2, label %2true, label %2false
-	; <label>:2true
-	br label %2end
-	; <label>:2false
+	br i1 %var2, label %1, label %2
+; <label>:1
+	br label %3
+; <label>:2
 	%var6 = load i1, i1* %var0
 	%var7 = load i1, i1* %var1
 	%var5 = icmp eq i1 %var6, %var7
 	%lbvar5 = add i1 0, %var5
-	br label %2end
-	; <label>:2end
-	%var4 = phi i1 [ %lbvar5, %2false], [1, %2true]
+	br label %3
+; <label>:3
+	%var4 = phi i1 [ %lbvar5, %2], [1, %1]
 	ret i1 %var4
-	}
-	
+}
 
-	define i64 @main() {
+define i64 @main() {
 	%var0 = alloca i64
 	store i64 4, i64* %var0
 	%var2 = load i64, i64* %var0
 	%var1 = icmp sle i64 3, %var2
-	br i1 %var1, label %1true, label %1false
-	; <label>:1false
-	br label %1end
-	; <label>:1true
+	br i1 %var1, label %2, label %1
+; <label>:1
+	br label %6
+; <label>:2
 	%var4 = icmp ne i64 4, 2
-	br i1 %var4, label %4true, label %4false
-	; <label>:4false
-	br label %4end
-	; <label>:4true
+	br i1 %var4, label %4, label %3
+; <label>:3
+	br label %5
+; <label>:4
 	%lbvar6 = add i1 0, 1
-	br label %4end
-	; <label>:4end
-	%var5 = phi i1 [ %lbvar6, %4true], [0, %4false]
+	br label %5
+; <label>:5
+	%var5 = phi i1 [ %lbvar6, %4], [0, %3]
 	%lbvar5 = add i1 0, %var5
-	br label %1end
-	; <label>:1end
-	%var3 = phi i1 [ %lbvar5, %4end], [0, %1false]
-	br i1 %var3, label %3true, label %3false
-	; <label>:3true
+	br label %6
+; <label>:6
+	%var3 = phi i1 [ %lbvar5, %5], [0, %1]
+	br i1 %var3, label %7, label %8
+; <label>:7
 	call void @printBool(i1 1)
-	br label %3end
-	; <label>:3false
+	br label %9
+; <label>:8
 	%var7 = call i8* @calloc(i64 4, i64 1)
 	call void @memcpy(i8* %var7, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str3, i64 0, i64 0), i64 4)
 	call void @printString(i8* %var7)
-	br label %3end
-	; <label>:3end
+	br label %9
+; <label>:9
 	%var8 = icmp eq i1 1, 1
-	br i1 %var8, label %8true, label %8false
-	; <label>:8true
-	br label %8end
-	; <label>:8false
+	br i1 %var8, label %10, label %11
+; <label>:10
+	br label %12
+; <label>:11
 	%var10 = call i1 @dontCallMe(i64 1)
 	%lbvar10 = add i1 0, %var10
-	br label %8end
-	; <label>:8end
-	%var9 = phi i1 [ %lbvar10, %8false], [1, %8true]
+	br label %12
+; <label>:12
+	%var9 = phi i1 [ %lbvar10, %11], [1, %10]
 	call void @printBool(i1 %var9)
 	%var11 = mul i64 5, -1
 	%var12 = icmp slt i64 4, %var11
-	br i1 %var12, label %12true, label %12false
-	; <label>:12false
-	br label %12end
-	; <label>:12true
+	br i1 %var12, label %14, label %13
+; <label>:13
+	br label %15
+; <label>:14
 	%var14 = call i1 @dontCallMe(i64 2)
 	%lbvar14 = add i1 0, %var14
-	br label %12end
-	; <label>:12end
-	%var13 = phi i1 [ %lbvar14, %12true], [0, %12false]
+	br label %15
+; <label>:15
+	%var13 = phi i1 [ %lbvar14, %14], [0, %13]
 	call void @printBool(i1 %var13)
 	%var16 = load i64, i64* %var0
 	%var15 = icmp eq i64 4, %var16
-	br i1 %var15, label %15true, label %15false
-	; <label>:15false
-	br label %15end
-	; <label>:15true
+	br i1 %var15, label %17, label %16
+; <label>:16
+	br label %21
+; <label>:17
 	%var18 = xor i1 0, 1
 	%var19 = icmp eq i1 1, %var18
-	br i1 %var19, label %19true, label %19false
-	; <label>:19false
-	br label %19end
-	; <label>:19true
+	br i1 %var19, label %19, label %18
+; <label>:18
+	br label %20
+; <label>:19
 	%lbvar21 = add i1 0, 1
-	br label %19end
-	; <label>:19end
-	%var20 = phi i1 [ %lbvar21, %19true], [0, %19false]
+	br label %20
+; <label>:20
+	%var20 = phi i1 [ %lbvar21, %19], [0, %18]
 	%lbvar20 = add i1 0, %var20
-	br label %15end
-	; <label>:15end
-	%var17 = phi i1 [ %lbvar20, %19end], [0, %15false]
+	br label %21
+; <label>:21
+	%var17 = phi i1 [ %lbvar20, %20], [0, %16]
 	call void @printBool(i1 %var17)
 	%var22 = call i1 @implies(i1 0, i1 0)
 	call void @printBool(i1 %var22)
@@ -219,6 +216,5 @@ define i64 @strlen(i8* %str) {
 	%var25 = call i1 @implies(i1 1, i1 1)
 	call void @printBool(i1 %var25)
 	ret i64 0
-	}
-	
+}
 

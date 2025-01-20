@@ -80,7 +80,7 @@ define i64 @strlen(i8* %str) {
   %final_index = load i64, i64* %counter
   ret i64 %final_index
 }
-	define i64 @main() {
+define i64 @main() {
 	%var0 = call i64 @readInt()
 	%var1 = alloca i64
 	store i64 %var0, i64* %var1
@@ -98,6 +98,5 @@ define i64 @strlen(i8* %str) {
 	%var10 = call i8* @concat_strings(i8* %var8, i8* %var9)
 	call void @printString(i8* %var10)
 	ret i64 0
-	}
-	
+}
 

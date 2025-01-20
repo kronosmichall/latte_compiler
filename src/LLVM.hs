@@ -387,16 +387,16 @@ exec (Ass line varExpr expr : xs) = do
       setVar reg v2
     x -> error $ "unexpected type " ++ show x
   exec xs
--- exec (Incr line varExpr : xs) = do
---   let e1 = EVar line (Ident name)
---   let e2 = ELitInt line 1
---   let expr = EAdd line e1 (Plus line) e2
---   exec (Ass line (Ident name) expr : xs)
--- exec (Decr line (Ident name) : xs) = do
---   let e1 = EVar line (Ident name)
---   let e2 = ELitInt line 1
---   let expr = EAdd line e1 (Minus line) e2
---   exec (Ass line (Ident name) expr : xs)
+exec (Incr line varExpr : xs) = do
+  let e1 = varExpr
+  let e2 = ELitInt line 1
+  let expr = EAdd line e1 (Plus line) e2
+  exec (Ass line varExpr expr : xs)
+exec (Decr line varExpr : xs) = do
+  let e1 = varExpr
+  let e2 = ELitInt line 1
+  let expr = EAdd line e1 (Minus line) e2
+  exec (Ass line varExpr expr : xs)
 exec (Ret line expr : xs) = do
   v <- eval expr
   v1 <- unwrap v
@@ -479,7 +479,6 @@ exec (While line expr stmt : xs) = do
 exec (SExp _ expr : xs) = do
   tmp <- eval expr
   exec xs
-exec _ = undefined
 
 findMain :: [TopDef] -> TopDef
 findMain topdefs =
@@ -489,7 +488,7 @@ findMain topdefs =
   isMain _ = False
 
 funHeader :: TopDef -> String
-funHeader (FnDef _ typ (Ident name) args _) = "define " ++ show (typeToMy typ) ++ " @" ++ name ++ "(" ++ intercalate ", " (map (\(Arg _ _ (Ident _)) -> show (typeToMy typ) ++ " %" ++ name) args) ++ ") {"
+funHeader (FnDef _ typ (Ident name) args _) = "define " ++ show (typeToMy typ) ++ " @" ++ name ++ "(" ++ intercalate ", " (map (\(Arg _ xtyp (Ident x)) -> show (typeToMy xtyp) ++ " %" ++ x) args) ++ ") {"
 funHeader _ = ""
 
 initArg :: Arg -> MyMonad ()

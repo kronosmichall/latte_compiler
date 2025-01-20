@@ -82,7 +82,7 @@ define i64 @strlen(i8* %str) {
 }
 @.str2 = private constant [4 x i8] c"bad\00"
 @.str1 = private constant [5 x i8] c"good\00"
-	define void @f(void %f) {
+define void @f(i8* %arg) {
 	%var0 = alloca i8*
 	store i8* %arg, i8** %var0
 	%var1 = call i8* @calloc(i64 5, i64 1)
@@ -91,14 +91,12 @@ define i64 @strlen(i8* %str) {
 	%var2 = load i8*, i8** %var0
 	call void @printString(i8* %var2)
 	ret void
-	}
-	
+}
 
-	define i64 @main() {
+define i64 @main() {
 	%var0 = call i8* @calloc(i64 4, i64 1)
 	call void @memcpy(i8* %var0, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str2, i64 0, i64 0), i64 4)
 	call void @f(i8* %var0)
 	ret i64 0
-	}
-	
+}
 

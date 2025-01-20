@@ -85,26 +85,25 @@ define i64 @strlen(i8* %str) {
 @.str4 = private constant [2 x i8] c" \00"
 @.str2 = private constant [6 x i8] c"false\00"
 @.str5 = private constant [14 x i8] c"concatenation\00"
-	define void @printBool(void %printBool) {
+define void @printBool(i1 %b) {
 	%var0 = alloca i1
 	store i1 %b, i1* %var0
 	%var1 = load i1, i1* %var0
-	br i1 %var1, label %1true, label %1false
-	; <label>:1true
+	br i1 %var1, label %1, label %2
+; <label>:1
 	%var2 = call i8* @calloc(i64 5, i64 1)
 	call void @memcpy(i8* %var2, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str1, i64 0, i64 0), i64 5)
 	call void @printString(i8* %var2)
 	ret void
-	; <label>:1false
+; <label>:2
 	%var3 = call i8* @calloc(i64 6, i64 1)
 	call void @memcpy(i8* %var3, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str2, i64 0, i64 0), i64 6)
 	call void @printString(i8* %var3)
 	ret void
 	ret void
-	}
-	
+}
 
-	define i64 @main() {
+define i64 @main() {
 	%var0 = alloca i64
 	store i64 56, i64* %var0
 	%var1 = mul i64 23, -1
@@ -152,6 +151,5 @@ define i64 @strlen(i8* %str) {
 	%var32 = call i8* @concat_strings(i8* %var30, i8* %var31)
 	call void @printString(i8* %var32)
 	ret i64 0
-	}
-	
+}
 

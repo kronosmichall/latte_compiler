@@ -80,14 +80,13 @@ define i64 @strlen(i8* %str) {
   %final_index = load i64, i64* %counter
   ret i64 %final_index
 }
-	define i64 @main() {
+define i64 @main() {
 	%var0 = icmp eq i1 1, 1
-	br i1 %var0, label %0true, label %0false
-	; <label>:0true
+	br i1 %var0, label %1, label %2
+; <label>:1
 	call void @printInt(i64 42)
-	br label %0false
-	; <label>:0false
+	br label %2
+; <label>:2
 	ret i64 0
-	}
-	
+}
 

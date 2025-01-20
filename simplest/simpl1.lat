@@ -3,18 +3,21 @@ class list {
     int elem;
 }
 
+list append(list xs) {
+  list head = new list;
+  head.elem = xs.elem + 1;
+  xs.next = head;
+  return head;
+}
 
 int main() {
   list l1 = new list;
-  list l2;
-  //list l2 = l1;
-  //bool b = l1 == l2;
-  if (l1 == (list)null) {
-    printString("bad");
-  }
-if (l2 == (list)null) {
-    printString("good");
-  }
+  l1.elem = 1;
+  list l2 = append(l1);
+
+  printInt(l2.elem);
+  printInt(l1.next.elem);
+
   return 0;
 }
 

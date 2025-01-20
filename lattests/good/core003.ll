@@ -80,24 +80,20 @@ define i64 @strlen(i8* %str) {
   %final_index = load i64, i64* %counter
   ret i64 %final_index
 }
-	define i64 @f() {
+define i64 @f() {
 	ret i64 0
-	}
-	
+}
 
-	define i64 @g() {
+define i64 @g() {
 	ret i64 0
-	}
-	
+}
 
-	define void @p() {
+define void @p() {
 	ret void
-	}
-	
+}
 
-	define i64 @main() {
+define i64 @main() {
 	call void @p()
 	ret i64 0
-	}
-	
+}
 

@@ -80,7 +80,7 @@ define i64 @strlen(i8* %str) {
   %final_index = load i64, i64* %counter
   ret i64 %final_index
 }
-	define i64 @main() {
+define i64 @main() {
 	%var0 = alloca i64
 	%var1 = alloca i64
 	store i64 7, i64* %var1
@@ -91,6 +91,5 @@ define i64 @strlen(i8* %str) {
 	%var4 = load i64, i64* %var1
 	call void @printInt(i64 %var4)
 	ret i64 0
-	}
-	
+}
 

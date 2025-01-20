@@ -80,57 +80,55 @@ define i64 @strlen(i8* %str) {
   %final_index = load i64, i64* %counter
   ret i64 %final_index
 }
-	define i64 @funkcja_ifbooltrudny(i64 %funkcja_ifbooltrudny, i64 %funkcja_ifbooltrudny) {
+define i64 @funkcja_ifbooltrudny(i1 %f, i1 %t) {
 	%var0 = alloca i1
 	store i1 %f, i1* %var0
 	%var1 = alloca i1
 	store i1 %t, i1* %var1
 	%var3 = load i1, i1* %var0
 	%var2 = xor i1 %var3, 1
-	br i1 %var2, label %2true, label %2false
-	; <label>:2false
-	br label %2end
-	; <label>:2true
+	br i1 %var2, label %2, label %1
+; <label>:1
+	br label %3
+; <label>:2
 	%var5 = load i1, i1* %var0
 	%lbvar5 = add i1 0, %var5
-	br label %2end
-	; <label>:2end
-	%var4 = phi i1 [ %lbvar5, %2true], [0, %2false]
-	br i1 %var4, label %4true, label %4false
-	; <label>:4true
-	br label %4end
-	; <label>:4false
+	br label %3
+; <label>:3
+	%var4 = phi i1 [ %lbvar5, %2], [0, %1]
+	br i1 %var4, label %4, label %5
+; <label>:4
+	br label %9
+; <label>:5
 	%var7 = load i1, i1* %var0
-	br i1 %var7, label %7true, label %7false
-	; <label>:7true
-	br label %7end
-	; <label>:7false
+	br i1 %var7, label %6, label %7
+; <label>:6
+	br label %8
+; <label>:7
 	%var10 = load i1, i1* %var1
 	%var9 = xor i1 %var10, 1
 	%lbvar9 = add i1 0, %var9
-	br label %7end
-	; <label>:7end
-	%var8 = phi i1 [ %lbvar9, %7false], [1, %7true]
+	br label %8
+; <label>:8
+	%var8 = phi i1 [ %lbvar9, %7], [1, %6]
 	%var11 = xor i1 %var8, 1
 	%lbvar11 = add i1 0, %var11
-	br label %4end
-	; <label>:4end
-	%var6 = phi i1 [ %lbvar11, %7end], [1, %4true]
-	br i1 %var6, label %6true, label %6false
-	; <label>:6true
+	br label %9
+; <label>:9
+	%var6 = phi i1 [ %lbvar11, %8], [1, %4]
+	br i1 %var6, label %10, label %11
+; <label>:10
 	call void @printInt(i64 1042)
-	br label %6end
-	; <label>:6false
+	br label %12
+; <label>:11
 	call void @printInt(i64 2042)
-	br label %6end
-	; <label>:6end
+	br label %12
+; <label>:12
 	ret i64 0
-	}
-	
+}
 
-	define i64 @main() {
+define i64 @main() {
 	%var0 = call i64 @funkcja_ifbooltrudny(i1 0, i1 1)
 	ret i64 0
-	}
-	
+}
 

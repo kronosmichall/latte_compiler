@@ -80,7 +80,7 @@ define i64 @strlen(i8* %str) {
   %final_index = load i64, i64* %counter
   ret i64 %final_index
 }
-	define i64 @foo(i64 %foo, i64 %foo, i64 %foo, i64 %foo, i64 %foo, i64 %foo, i64 %foo, i64 %foo, i64 %foo, i64 %foo, i64 %foo, i64 %foo, i64 %foo, i64 %foo) {
+define i64 @foo(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h, i64 %i, i64 %j, i64 %k, i64 %l, i64 %m, i64 %n) {
 	%var0 = alloca i64
 	store i64 %a, i64* %var0
 	%var1 = alloca i64
@@ -146,10 +146,9 @@ define i64 @strlen(i8* %str) {
 	call void @printInt(i64 %var46)
 	%var47 = load i64, i64* %var45
 	ret i64 %var47
-	}
-	
+}
 
-	define i64 @main() {
+define i64 @main() {
 	%var0 = alloca i64
 	store i64 1, i64* %var0
 	%var1 = alloca i64
@@ -194,6 +193,5 @@ define i64 @strlen(i8* %str) {
 	%var27 = load i64, i64* %var13
 	%var28 = call i64 @foo(i64 %var14, i64 %var15, i64 %var16, i64 %var17, i64 %var18, i64 %var19, i64 %var20, i64 %var21, i64 %var22, i64 %var23, i64 %var24, i64 %var25, i64 %var26, i64 %var27)
 	ret i64 %var28
-	}
-	
+}
 

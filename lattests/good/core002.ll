@@ -81,17 +81,15 @@ define i64 @strlen(i8* %str) {
   ret i64 %final_index
 }
 @.str1 = private constant [4 x i8] c"foo\00"
-	define void @foo() {
+define void @foo() {
 	%var0 = call i8* @calloc(i64 4, i64 1)
 	call void @memcpy(i8* %var0, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str1, i64 0, i64 0), i64 4)
 	call void @printString(i8* %var0)
 	ret void
-	}
-	
+}
 
-	define i64 @main() {
+define i64 @main() {
 	call void @foo()
 	ret i64 0
-	}
-	
+}
 

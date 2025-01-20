@@ -80,32 +80,30 @@ define i64 @strlen(i8* %str) {
   %final_index = load i64, i64* %counter
   ret i64 %final_index
 }
-	define i64 @ev(i64 %ev) {
+define i64 @ev(i64 %y) {
 	%var0 = alloca i64
 	store i64 %y, i64* %var0
 	%var2 = load i64, i64* %var0
 	%var1 = icmp sgt i64 %var2, 0
-	br i1 %var1, label %1true, label %1false
-	; <label>:1true
+	br i1 %var1, label %1, label %2
+; <label>:1
 	%var4 = load i64, i64* %var0
 	%var3 = sub i64 %var4, 2
 	%var5 = call i64 @ev(i64 %var3)
 	ret i64 %var5
-	; <label>:1false
+; <label>:2
 	%var7 = load i64, i64* %var0
 	%var6 = icmp slt i64 %var7, 0
-	br i1 %var6, label %6true, label %6false
-	; <label>:6true
+	br i1 %var6, label %3, label %4
+; <label>:3
 	ret i64 0
-	; <label>:6false
+; <label>:4
 	ret i64 1
-	}
-	
+}
 
-	define i64 @main() {
+define i64 @main() {
 	%var0 = call i64 @ev(i64 17)
 	call void @printInt(i64 %var0)
 	ret i64 0
-	}
-	
+}
 
