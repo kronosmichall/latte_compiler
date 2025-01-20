@@ -5,7 +5,9 @@ class list {
 
 
 int main() {
-  list l = new list;
+  list l;
+  if (l == (list)null) printString("good11");
+  l = new list;
   list l2 = l;
   if (l == l2) printString("XDD");
 
