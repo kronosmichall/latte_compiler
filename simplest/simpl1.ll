@@ -80,7 +80,8 @@ define i64 @strlen(i8* %str) {
   %final_index = load i64, i64* %counter
   ret i64 %final_index
 }
-@.str1 = private constant [4 x i8] c"XDD\00"
+@.str2 = private constant [5 x i8] c"good\00"
+@.str1 = private constant [4 x i8] c"bad\00"
 @.listsize = private constant i64 16
 define i64 @main() {
 	%var0= load i64, i64* @.listsize
@@ -88,10 +89,11 @@ define i64 @main() {
 	%var2 = alloca i8*
 	store i8* %var1, i8** %var2
 	%var3 = alloca i8*
-	%var4 = load i8*, i8** %var2
-	store i8* %var4, i8** %var3
+	store i8* null, i8** %var3
+	%var4 = alloca i8*
+	store i8* null, i8** %var4
 	%var6 = load i8*, i8** %var2
-	%var7 = load i8*, i8** %var3
+	%var7 = load i8*, i8** %var4
 	%var5 = icmp eq i8* %var6, %var7
 	br i1 %var5, label %1, label %2
 ; <label>:1
@@ -100,6 +102,18 @@ define i64 @main() {
 	call void @printString(i8* %var8)
 	br label %2
 ; <label>:2
+	%var9 = alloca i8*
+	store i8* null, i8** %var9
+	%var11 = load i8*, i8** %var3
+	%var12 = load i8*, i8** %var9
+	%var10 = icmp eq i8* %var11, %var12
+	br i1 %var10, label %3, label %4
+; <label>:3
+	%var13 = call i8* @calloc(i64 5, i64 1)
+	call void @memcpy(i8* %var13, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str2, i64 0, i64 0), i64 5)
+	call void @printString(i8* %var13)
+	br label %4
+; <label>:4
 	ret i64 0
 }
 

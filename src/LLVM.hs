@@ -24,7 +24,7 @@ addLabel str = do
 typeToPtr :: MyType -> MyType
 typeToPtr = MyPtr
 
-createVar :: VarName -> MyType -> MyMonad ()
+createVar :: VarName -> MyType -> MyMonad Integer
 createVar name typ = do
   (sts, reg) <- getVars
   let val = (reg, 1, typeToPtr typ)
@@ -33,13 +33,28 @@ createVar name typ = do
 
   putVars (Map.insert name val sts, reg + 1)
   addInstr instr
+  return reg
+
+createVarSetNull :: VarName -> MyType -> MyMonad ()
+createVarSetNull name typ = do
+  reg <- createVar name typ
+  case typ of
+    MyStruct _ -> do
+      let instr2 = "store i8* null, i8** %var" ++ show reg
+      addInstr instr2
+    MyClass _ -> do
+      let instr2 = "store i8* null, i8** %var" ++ show reg
+      addInstr instr2
+    _ -> return ()
+
+
 
 getValReg :: VarVal -> MyMonad Register
 getValReg (VarReg (reg, ref, typ)) = return reg
 getValReg _ = error "Not a register"
 
 newVarNoInit :: MyType -> VarName -> MyMonad ()
-newVarNoInit typ name = createVar name typ
+newVarNoInit typ name = createVarSetNull name typ
 
 setVar :: VarReg -> VarVal -> MyMonad ()
 setVar (reg, ref, typ) val = do
@@ -64,7 +79,7 @@ declareItem :: MyType -> Item -> MyMonad ()
 declareItem typ (NoInit line (Ident name)) = newVarNoInit typ name
 declareItem typ (Init line (Ident name) expr) = do
   v <- eval expr
-  newVarNoInit typ name
+  _ <- createVar name typ
   varReg <- getVarReg name
   setVar varReg v
 
@@ -307,10 +322,10 @@ eval (ERel line e1 op e2) = do
 eval (EAnd line e1 e2) = evalAnd e1 e2
 eval (EOr line e1 e2) = evalOr e1 e2
 eval (ENew _ (Class _ (Ident name))) = do
-  if capitalised name
+  if capitalised name -- classes
     then do
       undefined
-    else do
+    else do -- structs
       reg <- getRegIncrement
       reg2 <- getRegIncrement
       let i1 = "%var" ++ show reg ++ "= load i64, i64* @." ++ name ++ "size"
@@ -318,12 +333,11 @@ eval (ENew _ (Class _ (Ident name))) = do
       addInstr $ combineInstr [i1, i2]
       return $ VarReg (reg2, 1, MyStruct name)
 
-eval (EAttr _ e (Ident attr)) = do 
+eval (EAttr _ e (Ident attr)) = do
   v1 <- eval e
   v2 <- unwrap v1
-  case v2 of 
-    VarReg(reg, ref, MyStruct strName) -> do 
-      -- strName <- getVarStr name
+  case v2 of
+    VarReg(reg, ref, MyStruct strName) -> do
       shift <- getAttrShift strName attr
       typ <- getAttrType strName attr
       reg2 <- getRegIncrement
@@ -333,6 +347,16 @@ eval (EAttr _ e (Ident attr)) = do
       addInstr $ combineInstr [i1, i2]
       return $ VarReg (reg3, 1, typeToPtr typ)
     _ -> undefined
+
+eval (ENull _ (Ident cls)) = do
+  if capitalised cls -- classes
+    then return $ VarReg (-1, -1, MyPtr (MyClass cls))
+    else  do 
+      reg <- getRegIncrement
+      let i1 = "%var" ++ show reg ++ " = alloca i8*"
+      let i2 = "store i8* null, i8** %var" ++ show reg
+      addInstr $ combineInstr [i1, i2]
+      return $ VarReg (reg, 1, MyPtr (MyStruct cls))
 
 eval x = error $ show x
 
@@ -357,7 +381,7 @@ exec (Ass line varExpr expr : xs) = do
   v1 <- eval varExpr
   v2 <- eval expr
   case v1 of
-    VarReg reg -> do 
+    VarReg reg -> do
       setVar reg v2
     x -> error $ "unexpected type " ++ show x
   exec xs
@@ -507,7 +531,7 @@ getVarStr :: VarName -> MyMonad String
 getVarStr name = do
   (sts, _) <- getVars
   case Map.lookup name sts of
-    Just (reg, ref, typ) -> case typ of 
+    Just (reg, ref, typ) -> case typ of
       MyStruct s -> return s
       MyPtr (MyStruct s) -> return s
       t -> error $ "Variable " ++ name ++ " is not a struct" ++ show t
@@ -528,7 +552,7 @@ getAttrType strName attrName = do
   let attrs = case Map.lookup strName str of
         Just x -> x
         Nothing -> error $ "Struct " ++ strName ++ " not found"
-  case find (\(n , t) -> n == attrName) attrs of 
+  case find (\(n , t) -> n == attrName) attrs of
     Just (_, typ) -> return typ
     Nothing -> error $ "Attribute " ++ attrName ++ " not found"
 
@@ -539,7 +563,7 @@ initStrAttrs :: String -> CBlock -> MyMonad ()
 initStrAttrs strName (CBlock _ defs) = do
   let attrs = map (\(Attr _ typ (Ident attrName)) -> (attrName, typeToMy typ)) $ filter isAttr defs
   modifyTopDefs (\(funs, str, cls) -> (funs, Map.insert strName attrs str, cls))
-  where 
+  where
       isAttr (Attr {}) = True
       isAttr _ = False
 
