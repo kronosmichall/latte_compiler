@@ -349,14 +349,16 @@ eval (EAttr _ e (Ident attr)) = do
     _ -> undefined
 
 eval (ENull _ (Ident cls)) = do
-  if capitalised cls -- classes
-    then return $ VarReg (-1, -1, MyPtr (MyClass cls))
-    else  do 
-      reg <- getRegIncrement
-      let i1 = "%var" ++ show reg ++ " = alloca i8*"
-      let i2 = "store i8* null, i8** %var" ++ show reg
-      addInstr $ combineInstr [i1, i2]
-      return $ VarReg (reg, 1, MyPtr (MyStruct cls))
+  let typ  = if capitalised cls -- classes
+      then  MyPtr (MyClass cls)
+      else  MyPtr (MyStruct cls)
+
+  reg <- getRegIncrement
+  let i1 = "%var" ++ show reg ++ " = alloca i8*"
+  let i2 = "store i8* null, i8** %var" ++ show reg
+  addInstr $ combineInstr [i1, i2]
+  return $ VarReg (reg, 1, typ)
+
 
 eval x = error $ show x
 
