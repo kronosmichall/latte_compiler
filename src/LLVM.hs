@@ -318,8 +318,8 @@ eval (ENew _ (Class _ (Ident name))) = do
       addInstr $ combineInstr [i1, i2]
       return $ VarReg (reg2, 1, MyStruct name)
 
-eval (EAttr _ (EVar l (Ident name)) (Ident attr)) = do 
-  v1 <- eval (EVar l (Ident name))
+eval (EAttr _ e (Ident attr)) = do 
+  v1 <- eval e
   v2 <- unwrap v1
   case v2 of 
     VarReg(reg, ref, MyStruct strName) -> do 
@@ -333,7 +333,8 @@ eval (EAttr _ (EVar l (Ident name)) (Ident attr)) = do
       addInstr $ combineInstr [i1, i2]
       return $ VarReg (reg3, 1, typeToPtr typ)
     _ -> undefined
-eval _ = undefined
+
+eval x = error $ show x
 
 lastInstrIsRet :: MyMonad Bool
 lastInstrIsRet = do

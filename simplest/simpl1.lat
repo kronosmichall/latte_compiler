@@ -1,5 +1,5 @@
 class list {
-    string s;
+    list next;
     int elem;
 }
 
@@ -10,6 +10,14 @@ int main() {
   l.elem = 1;
   int x = l.elem;
   printInt(x);
+
+  list l2 = new list;
+  l2.elem = 2;
+  printInt(l2.elem);
+
+  l2.next = l;
+  int y = l2.next.elem;
+  printInt(y);
   return 0;
 }
 
