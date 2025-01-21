@@ -85,21 +85,15 @@ define i64 @strlen(i8* %str) {
 define i64 @main() {
 	%var0 = alloca i64
 	store i64 0, i64* %var0
-	%var5 = alloca i8*
 	br label %1
 ; <label>:1
 	%var2 = load i64, i64* %var0
-	%var1 = icmp slt i64 %var2, 1000000
+	%var1 = icmp slt i64 %var2, 1000000000
 	br i1 %var1, label %2, label %3
 ; <label>:2
-	%var3= load i64, i64* @.Countersize
-	%var4 = call i8* @calloc(i64 1, i64 %var3)
-	store i8* %var4, i8** %var5
-	%var7 = load i64, i64* %var0
-	%var6 = add i64 %var7, 1
-	store i64 %var6, i64* %var0
-	%var8 = load i8*, i8** %var5
-	call void @free (i8* %var8)
+	%var4 = load i64, i64* %var0
+	%var3 = add i64 %var4, 1
+	store i64 %var3, i64* %var0
 	br label %1
 ; <label>:3
 	ret i64 0

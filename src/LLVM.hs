@@ -15,6 +15,7 @@ import qualified PostProcess
 import State
 import Types
 import Common
+import GHC.OldList (partition)
 
 addLabel :: String -> MyMonad ()
 addLabel str = do
@@ -488,6 +489,8 @@ exec (CondElse _ expr stmt1 stmt2 : xs) = do
       exec xs
     x -> error $ "unexpected type" ++ show x
 exec (While line expr stmt : xs) = do
+  res1 <- getRes
+  let len1 = length res1
   let l0 = show line ++ "while"
   let i0 = "br label %" ++ l0
   addInstr i0
@@ -502,6 +505,10 @@ exec (While line expr stmt : xs) = do
       addInstr i1
       addLabel l1
       exec [stmt]
+      res2 <- getRes
+      let newInstrs = drop len1 res2 
+      let (allocaInstr, restInstr) = splitAlloca newInstrs
+      putRes $ res1 ++ allocaInstr ++ restInstr
       let instr = "br label %" ++ l1
       addInstr instr
     VarReg (reg, ref, _) -> do
@@ -511,6 +518,10 @@ exec (While line expr stmt : xs) = do
       addInstr instr
       addLabel l1
       exec [stmt]
+      res2 <- getRes
+      let newInstrs = drop len1 res2 
+      let (allocaInstr, restInstr) = splitAlloca newInstrs
+      putRes $ res1 ++ allocaInstr ++ restInstr
       addInstr $ "br label %" ++ l0
       addLabel l2
       exec xs
@@ -518,6 +529,12 @@ exec (While line expr stmt : xs) = do
 exec (SExp _ expr : xs) = do
   tmp <- eval expr
   exec xs
+
+splitAlloca :: [Instr] -> ([Instr], [Instr])
+splitAlloca instrs = (allocaInstrs, otherInstrs)
+  where
+    (allocaInstrs, otherInstrs) = partition isAlloca instrs
+    isAlloca instr = "alloca" `isInfixOf` instr
 
 findMain :: [TopDef] -> TopDef
 findMain topdefs =
