@@ -6,7 +6,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 
--- | The abstract syntax of language latte.
+-- | The abstract syntax of language .
 
 module Abs where
 
@@ -43,6 +43,10 @@ data CDef' a
     | Attr a (Type' a) Ident
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
+type SIdent = SIdent' BNFC'Position
+data SIdent' a = SIdent a Ident | SIdentAttr a Ident (SIdent' a)
+  deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
+
 type Block = Block' BNFC'Position
 data Block' a = Block a [Stmt' a]
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
@@ -52,9 +56,9 @@ data Stmt' a
     = Empty a
     | BStmt a (Block' a)
     | Decl a (Type' a) [Item' a]
-    | Ass a (Expr' a) (Expr' a)
-    | Incr a (Expr' a)
-    | Decr a (Expr' a)
+    | Ass a (SIdent' a) (Expr' a)
+    | Incr a (SIdent' a)
+    | Decr a (SIdent' a)
     | Ret a (Expr' a)
     | VRet a
     | Cond a (Expr' a) (Stmt' a)
@@ -73,13 +77,18 @@ data Type' a
     | Str a
     | Bool a
     | Void a
-    | Class a Ident
     | Fun a (Type' a) [Type' a]
+    | Class a Ident
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type Expr = Expr' BNFC'Position
 data Expr' a
-    = EVar a Ident
+    = ENull a
+    | ESelfMet a [EChain' a]
+    | ENew a (Type' a)
+    | EAttr a Ident (SIdent' a)
+    | EMet a Ident [EChain' a]
+    | EVar a Ident
     | ELitInt a Integer
     | ELitTrue a
     | ELitFalse a
@@ -92,10 +101,10 @@ data Expr' a
     | ERel a (Expr' a) (RelOp' a) (Expr' a)
     | EAnd a (Expr' a) (Expr' a)
     | EOr a (Expr' a) (Expr' a)
-    | EAttr a (Expr' a) Ident
-    | EMet a (Expr' a) [Expr' a]
-    | ENew a (Type' a)
-    | ENull a Ident
+  deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
+
+type EChain = EChain' BNFC'Position
+data EChain' a = EChain a (SIdent' a) [Expr' a]
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type AddOp = AddOp' BNFC'Position
@@ -151,6 +160,11 @@ instance HasPosition CDef where
     MthDef p _ _ _ _ -> p
     Attr p _ _ -> p
 
+instance HasPosition SIdent where
+  hasPosition = \case
+    SIdent p _ -> p
+    SIdentAttr p _ _ -> p
+
 instance HasPosition Block where
   hasPosition = \case
     Block p _ -> p
@@ -181,11 +195,16 @@ instance HasPosition Type where
     Str p -> p
     Bool p -> p
     Void p -> p
-    Class p _ -> p
     Fun p _ _ -> p
+    Class p _ -> p
 
 instance HasPosition Expr where
   hasPosition = \case
+    ENull p -> p
+    ESelfMet p _ -> p
+    ENew p _ -> p
+    EAttr p _ _ -> p
+    EMet p _ _ -> p
     EVar p _ -> p
     ELitInt p _ -> p
     ELitTrue p -> p
@@ -199,10 +218,10 @@ instance HasPosition Expr where
     ERel p _ _ _ -> p
     EAnd p _ _ -> p
     EOr p _ _ -> p
-    EAttr p _ _ -> p
-    EMet p _ _ -> p
-    ENew p _ -> p
-    ENull p _ -> p
+
+instance HasPosition EChain where
+  hasPosition = \case
+    EChain p _ _ -> p
 
 instance HasPosition AddOp where
   hasPosition = \case

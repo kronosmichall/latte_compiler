@@ -1,23 +1,22 @@
-
 -- programs ------------------------------------------------
 entrypoints Program ;
-Program.   Program ::= [TopDef] ;
+Programm.   Program ::= [TopDef] ;
 FnDef.	   TopDef ::= Type Ident "(" [Arg] ")" Block ;
 CTopDef.     TopDef ::= "class" Ident CBlock ;
 CTopExtDef.  TopDef ::= "class" Ident "extends" Ident CBlock ;
 separator nonempty TopDef "" ;
-Arg. 	   Arg ::= Type Ident;
+FArg. 	   Arg ::= Type Ident;
 separator  Arg "," ;
 -- class members --------------------------------------------
-CBlock.   CBlock ::= "{" [CDef] "}";
+CBlockk.   CBlock ::= "{" [CDef] "}";
 MthDef.    CDef ::= Type Ident "(" [Arg] ")" Block ;
 Attr.    CDef ::= Type Ident ";" ;
 separator  CDef "" ;
 -- statements ----------------------------------------------
-SIdent.    SIdent ::= Ident ;
-SIdentAttr.  SIdent ::= Ident "." SIdent ;
+SIdentt.    SIdent ::= Ident ;
+separator nonempty SIdent "."  ;
 
-Block.     Block ::= "{" [Stmt] "}" ;
+Blockk.     Block ::= "{" [Stmt] "}" ;
 separator  Stmt "" ;
 Empty.     Stmt ::= ";" ;
 BStmt.     Stmt ::= Block ;
@@ -35,24 +34,14 @@ CondElse.  Stmt ::= "if" "(" Expr ")" Stmt "else" Stmt  ;
 While.     Stmt ::= "while" "(" Expr ")" Stmt ;
 SExp.      Stmt ::= Expr  ";" ;
 -- Types ---------------------------------------------------
-
 Int.       Type ::= "int" ;
 Str.       Type ::= "string" ;
 Bool.      Type ::= "boolean" ;
 Void.      Type ::= "void" ;
-internal   Fun. Type ::= Type "(" [Type] ")" ;
 Class.     Type ::= Ident ; 
+internal   Fun. Type ::= Type "(" [Type] ")" ;
 separator  Type "," ;
-
-
 -- Expressions ---------------------------------------------
-
--- ETNull.    Expr8 ::= "(" Type ")" "null" ;
-ENull.     Expr8 ::= "null" ;
-ESelfMet.  Expr7 ::= "self." [EChain] ;
-ENew.      Expr7 ::= "new" Type ;
-EAttr.     Expr7 ::= Ident "." SIdent ;
-EMet.      Expr7 ::= Ident "." [EChain] ;
 EVar.      Expr6 ::= Ident ;
 ELitInt.   Expr6 ::= Integer ;
 ELitTrue.  Expr6 ::= "true" ;
@@ -66,15 +55,14 @@ EAdd.      Expr3 ::= Expr3 AddOp Expr4 ;
 ERel.      Expr2 ::= Expr2 RelOp Expr3 ;
 EAnd.      Expr1 ::= Expr2 "&&" Expr1 ;
 EOr.       Expr ::= Expr1 "||" Expr ;
-
-EChain.  EChain ::=  SIdent "(" [Expr] ")" ;
-separator EChain "." ;
-
-coercions  Expr 8 ;
+EAttr.     Expr6 ::= SIdent ;
+EMet.      Expr6 ::= SIdent "(" [Expr] ")" ;
+ESelfMet.  Expr6 ::= "self." SIdent "(" [Expr] ")" ;
+ENew.      Expr6 ::= "new" Type ;
+ENull.    Expr6 ::= "(" Ident ")" "null" ;
+coercions  Expr 6 ;
 separator  Expr "," ;
-
 -- operators -----------------------------------------------
-
 Plus.      AddOp ::= "+" ;
 Minus.     AddOp ::= "-" ;
 Times.     MulOp ::= "*" ;
@@ -86,11 +74,7 @@ GTH.       RelOp ::= ">" ;
 GE.        RelOp ::= ">=" ;
 EQU.       RelOp ::= "==" ;
 NE.        RelOp ::= "!=" ;
-
 -- comments ------------------------------------------------
-
 comment    "#" ;
-
 comment    "//" ;
-
 comment    "/*" "*/" ;

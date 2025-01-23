@@ -58,7 +58,12 @@ subRef refID = do
   (ref, mapp) <- getRefs
   modifyRefs (\(ref, mapp) -> (ref, Map.update (\count -> if count > 1 then Just (count - 1) else Nothing) refID mapp))
 
-
+getIDCount :: RefID -> MyMonad RefCount
+getIDCount refID = do
+  (_, mapp) <- getRefs
+  case Map.lookup refID mapp of
+    Just count -> return count
+    Nothing -> return 0
 
 putVars :: VarState -> MyMonad ()
 putVars vars = modify (\(_, t, r, ref) -> (vars, t, r, ref))

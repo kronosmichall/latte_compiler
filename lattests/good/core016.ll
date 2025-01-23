@@ -9,6 +9,7 @@ declare i8* @malloc(i64)
 declare i8* @realloc(i8*, i64)
 declare i8* @calloc(i64, i64)
 declare void @memcpy(i8*, i8*, i64)
+declare void @free(i8*)
 declare i8 @getchar()
 
 declare void @exit()

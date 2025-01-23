@@ -81,21 +81,37 @@ define i64 @strlen(i8* %str) {
   %final_index = load i64, i64* %counter
   ret i64 %final_index
 }
-@.Countersize = private constant i64 800
+@.str1 = private constant [5 x i8] c"lala\00"
+@.str3 = private constant [6 x i8] c"new 2\00"
+@.str2 = private constant [6 x i8] c"new 1\00"
 define i64 @main() {
-	%var0 = alloca i64
-	store i64 0, i64* %var0
-	br label %1
-; <label>:1
-	%var2 = load i64, i64* %var0
-	%var1 = icmp slt i64 %var2, 1000000000
-	br i1 %var1, label %2, label %3
-; <label>:2
-	%var4 = load i64, i64* %var0
-	%var3 = add i64 %var4, 1
-	store i64 %var3, i64* %var0
-	br label %1
-; <label>:3
+	%var0 = call i8* @calloc(i64 5, i64 1)
+	call void @memcpy(i8* %var0, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str1, i64 0, i64 0), i64 5)
+	%var1 = alloca i8*
+	store i8* %var0, i8** %var1
+	%var2 = alloca i8*
+	%var3 = load i8*, i8** %var1
+	store i8* %var3, i8** %var2
+	%var4 = load i8*, i8** %var1
+	call void @printString(i8* %var4)
+	%var6 = load i8*, i8** %var2
+	call void @printString(i8* %var6)
+	%var8 = call i8* @calloc(i64 6, i64 1)
+	call void @memcpy(i8* %var8, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str2, i64 0, i64 0), i64 6)
+	store i8* %var8, i8** %var1
+	%var9 = load i8*, i8** %var1
+	call void @printString(i8* %var9)
+	%var11 = load i8*, i8** %var2
+	call void @printString(i8* %var11)
+	%var13 = call i8* @calloc(i64 6, i64 1)
+	call void @memcpy(i8* %var13, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str3, i64 0, i64 0), i64 6)
+	%var14 = load i8*, i8** %var2
+	call void @free (i8* %var14)
+	store i8* %var13, i8** %var2
+	%var15 = load i8*, i8** %var1
+	call void @printString(i8* %var15)
+	%var17 = load i8*, i8** %var2
+	call void @printString(i8* %var17)
 	ret i64 0
 }
 

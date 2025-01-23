@@ -9,6 +9,7 @@ declare i8* @malloc(i64)
 declare i8* @realloc(i8*, i64)
 declare i8* @calloc(i64, i64)
 declare void @memcpy(i8*, i8*, i64)
+declare void @free(i8*)
 declare i8 @getchar()
 
 declare void @exit()
@@ -90,6 +91,7 @@ define i64 @main() {
 	call void @printInt(i64 %var2)
 	%var3 = load i64, i64* %var0
 	call void @printInt(i64 %var3)
+	%var11 = alloca i64
 	br label %1
 ; <label>:1
 	%var5 = load i64, i64* %var0
@@ -103,7 +105,6 @@ define i64 @main() {
 	call void @printInt(i64 %var8)
 	%var10 = load i64, i64* %var0
 	%var9 = add i64 %var10, 7
-	%var11 = alloca i64
 	store i64 %var9, i64* %var11
 	%var12 = load i64, i64* %var11
 	call void @printInt(i64 %var12)

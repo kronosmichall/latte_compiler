@@ -81,10 +81,31 @@ define i64 @strlen(i8* %str) {
   %final_index = load i64, i64* %counter
   ret i64 %final_index
 }
+@.str2 = private constant [6 x i8] c"new 1\00"
+@.str1 = private constant [5 x i8] c"lala\00"
+@.strWrapsize = private constant i64 8
 define i64 @main() {
-	%var0 = alloca i64
-	%var1 = load i64, i64* %var0
-	call void @printInt(i64 %var1)
+	%var0= load i64, i64* @.strWrapsize
+	%var1 = call i8* @calloc(i64 1, i64 %var0)
+	%var2 = alloca i8*
+	store i8* %var1, i8** %var2
+	%var3 = load i8*, i8** %var2
+	%var4 = getelementptr  i8, i8* %var3, i64 0
+	%var5 = bitcast i8* %var4 to i8**
+	%var6 = call i8* @calloc(i64 5, i64 1)
+	call void @memcpy(i8* %var6, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str1, i64 0, i64 0), i64 5)
+	store i8* %var6, i8** %var5
+	%var7 = load i8*, i8** %var2
+	%var8 = getelementptr  i8, i8* %var7, i64 0
+	%var9 = bitcast i8* %var8 to i8**
+	%var10 = load i8*, i8** %var9
+	call void @printString(i8* %var10)
+	%var12 = load i8*, i8** %var2
+	%var13 = getelementptr  i8, i8* %var12, i64 0
+	%var14 = bitcast i8* %var13 to i8**
+	%var15 = call i8* @calloc(i64 6, i64 1)
+	call void @memcpy(i8* %var15, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str2, i64 0, i64 0), i64 6)
+	store i8* %var15, i8** %var14
 	ret i64 0
 }
 

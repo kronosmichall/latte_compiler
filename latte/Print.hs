@@ -176,6 +176,11 @@ instance Print [Abs.CDef' a] where
   prt _ [] = concatD []
   prt _ (x:xs) = concatD [prt 0 x, prt 0 xs]
 
+instance Print (Abs.SIdent' a) where
+  prt i = \case
+    Abs.SIdent _ id_ -> prPrec i 0 (concatD [prt 0 id_])
+    Abs.SIdentAttr _ id_ sident -> prPrec i 0 (concatD [prt 0 id_, doc (showString "."), prt 0 sident])
+
 instance Print (Abs.Block' a) where
   prt i = \case
     Abs.Block _ stmts -> prPrec i 0 (concatD [doc (showString "{"), prt 0 stmts, doc (showString "}")])
@@ -189,9 +194,9 @@ instance Print (Abs.Stmt' a) where
     Abs.Empty _ -> prPrec i 0 (concatD [doc (showString ";")])
     Abs.BStmt _ block -> prPrec i 0 (concatD [prt 0 block])
     Abs.Decl _ type_ items -> prPrec i 0 (concatD [prt 0 type_, prt 0 items, doc (showString ";")])
-    Abs.Ass _ expr1 expr2 -> prPrec i 0 (concatD [prt 0 expr1, doc (showString "="), prt 0 expr2, doc (showString ";")])
-    Abs.Incr _ expr -> prPrec i 0 (concatD [prt 0 expr, doc (showString "++"), doc (showString ";")])
-    Abs.Decr _ expr -> prPrec i 0 (concatD [prt 0 expr, doc (showString "--"), doc (showString ";")])
+    Abs.Ass _ sident expr -> prPrec i 0 (concatD [prt 0 sident, doc (showString "="), prt 0 expr, doc (showString ";")])
+    Abs.Incr _ sident -> prPrec i 0 (concatD [prt 0 sident, doc (showString "++"), doc (showString ";")])
+    Abs.Decr _ sident -> prPrec i 0 (concatD [prt 0 sident, doc (showString "--"), doc (showString ";")])
     Abs.Ret _ expr -> prPrec i 0 (concatD [doc (showString "return"), prt 0 expr, doc (showString ";")])
     Abs.VRet _ -> prPrec i 0 (concatD [doc (showString "return"), doc (showString ";")])
     Abs.Cond _ expr stmt -> prPrec i 0 (concatD [doc (showString "if"), doc (showString "("), prt 0 expr, doc (showString ")"), prt 0 stmt])
@@ -215,8 +220,8 @@ instance Print (Abs.Type' a) where
     Abs.Str _ -> prPrec i 0 (concatD [doc (showString "string")])
     Abs.Bool _ -> prPrec i 0 (concatD [doc (showString "boolean")])
     Abs.Void _ -> prPrec i 0 (concatD [doc (showString "void")])
-    Abs.Class _ id_ -> prPrec i 0 (concatD [prt 0 id_])
     Abs.Fun _ type_ types -> prPrec i 0 (concatD [prt 0 type_, doc (showString "("), prt 0 types, doc (showString ")")])
+    Abs.Class _ id_ -> prPrec i 0 (concatD [prt 0 id_])
 
 instance Print [Abs.Type' a] where
   prt _ [] = concatD []
@@ -225,6 +230,11 @@ instance Print [Abs.Type' a] where
 
 instance Print (Abs.Expr' a) where
   prt i = \case
+    Abs.ENull _ -> prPrec i 8 (concatD [doc (showString "null")])
+    Abs.ESelfMet _ echains -> prPrec i 7 (concatD [doc (showString "self."), prt 0 echains])
+    Abs.ENew _ type_ -> prPrec i 7 (concatD [doc (showString "new"), prt 0 type_])
+    Abs.EAttr _ id_ sident -> prPrec i 7 (concatD [prt 0 id_, doc (showString "."), prt 0 sident])
+    Abs.EMet _ id_ echains -> prPrec i 7 (concatD [prt 0 id_, doc (showString "."), prt 0 echains])
     Abs.EVar _ id_ -> prPrec i 6 (concatD [prt 0 id_])
     Abs.ELitInt _ n -> prPrec i 6 (concatD [prt 0 n])
     Abs.ELitTrue _ -> prPrec i 6 (concatD [doc (showString "true")])
@@ -238,10 +248,15 @@ instance Print (Abs.Expr' a) where
     Abs.ERel _ expr1 relop expr2 -> prPrec i 2 (concatD [prt 2 expr1, prt 0 relop, prt 3 expr2])
     Abs.EAnd _ expr1 expr2 -> prPrec i 1 (concatD [prt 2 expr1, doc (showString "&&"), prt 1 expr2])
     Abs.EOr _ expr1 expr2 -> prPrec i 0 (concatD [prt 1 expr1, doc (showString "||"), prt 0 expr2])
-    Abs.EAttr _ expr id_ -> prPrec i 6 (concatD [prt 6 expr, doc (showString "."), prt 0 id_])
-    Abs.EMet _ expr exprs -> prPrec i 6 (concatD [prt 6 expr, doc (showString "("), prt 0 exprs, doc (showString ")")])
-    Abs.ENew _ type_ -> prPrec i 6 (concatD [doc (showString "new"), prt 0 type_])
-    Abs.ENull _ id_ -> prPrec i 6 (concatD [doc (showString "("), prt 0 id_, doc (showString ")"), doc (showString "null")])
+
+instance Print (Abs.EChain' a) where
+  prt i = \case
+    Abs.EChain _ sident exprs -> prPrec i 0 (concatD [prt 0 sident, doc (showString "("), prt 0 exprs, doc (showString ")")])
+
+instance Print [Abs.EChain' a] where
+  prt _ [] = concatD []
+  prt _ [x] = concatD [prt 0 x]
+  prt _ (x:xs) = concatD [prt 0 x, doc (showString "."), prt 0 xs]
 
 instance Print [Abs.Expr' a] where
   prt _ [] = concatD []
