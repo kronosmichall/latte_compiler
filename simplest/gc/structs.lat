@@ -1,14 +1,13 @@
 int main() {
     {
-        strWrap wrap = new strWrap;
-        wrap.s = "lala";
-        printString(wrap.s);
-        wrap.s = "new 1";
-    } // free "new 1", wrap
-    
+        wrap w = new wrap;
+        w.s = "some string";
+        w.s = "other"; // free "some string"
+    } // free w.s, free w
+
     return 0;
 }
 
-class strWrap {
+class wrap {
     string s;
 }

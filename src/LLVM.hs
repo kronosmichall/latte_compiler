@@ -91,7 +91,8 @@ declareItem typ (Init line (Ident name) expr) = do
     VarReg (_, refID2, _) -> do
       modifyVars (\(mapp, ref) -> (Map.insert name (reg, refID2, typ2) mapp, ref))
     _ -> return ()
-  
+
+  debugGC
 
 funApply :: VarName -> [VarVal] -> MyMonad VarVal
 funApply funName args = do
@@ -353,7 +354,7 @@ eval (ENew _ _) = undefined
 eval (EAttr line (Ident obj) attrIdent) = do
   v1 <- eval (EVar line (Ident obj))
   v2 <- unwrap v1
-  ceval v2 attrIdent
+  ceval v2 attrIdent [obj]
 
 eval (ENull _ ) = do
   undefined
@@ -384,8 +385,9 @@ eval (EMet _ e exprs) = do
 --         funApply funName (v1 : args2)
 --     x-> error $ "unexpected call method for " ++ show x
 
-ceval :: VarVal -> SIdent -> MyMonad VarVal
-ceval v (SIdent _ (Ident attr)) = do
+ceval :: VarVal -> SIdent -> [String] -> MyMonad VarVal
+ceval v (SIdent _ (Ident attr)) path = do
+  let path2 = intercalate "." $ path ++ [attr]
   v2 <- unwrap v
   case v2 of
     VarReg (reg, ref, typ2) -> do
@@ -400,21 +402,27 @@ ceval v (SIdent _ (Ident attr)) = do
       let i1 = "%var" ++ show reg2 ++ " = getelementptr  i8, i8* %var" ++ show reg ++ ", i64 " ++ show shift
       let i2 = "%var" ++ show reg3 ++ " = bitcast i8* %var" ++ show reg2 ++ " to " ++ show (typeToPtr typ)
       addInstr $ combineInstr [i1, i2]
-      refID <- getRefIDIncrement
-      addRef refID
-      return $ VarReg (reg3, refID, typeToPtr typ)
+      (sts, _) <- getVars
+      case Map.lookup path2 sts of
+        Just (_, refID2, _) -> return $ VarReg (reg3, refID2, typeToPtr typ)
+        Nothing -> do
+          refID <- getRefIDIncrement
+          addRef refID
+          return $ VarReg (reg3, refID, typeToPtr typ)
     _ -> undefined
-ceval v (SIdentAttr line (Ident attr) sident) = do
-  v2 <- ceval v (SIdent line (Ident attr))
-  ceval v2 sident
+
+
+ceval v (SIdentAttr line (Ident attr) sident) path = do
+  let path2 = path ++ [attr]
+  v2 <- ceval v (SIdent line (Ident attr)) path2
+  ceval v2 sident path2
 
 ceval2 :: SIdent -> MyMonad VarVal
 ceval2 (SIdent line (Ident attr)) = do
-
   eval (EVar line (Ident attr))
 ceval2 (SIdentAttr line (Ident attr) sident) = do
   v <- ceval2 (SIdent line (Ident attr))
-  ceval v sident
+  ceval v sident [attr]
 
 
 lastInstrIsRet :: MyMonad Bool
@@ -464,6 +472,9 @@ exec (BStmt _ (Block _ stmts) : xs) = do
   freeIDs idsToFree
   cleanIDsToFree
   putVars (sts, reg2)
+  
+  debugGC
+
   exec xs
 exec (Decl _ typ items : xs) = do
   mapM_ (declareItem (typeToMy typ)) items
@@ -473,12 +484,14 @@ exec (Ass line sIdent expr : xs) = do
   v2 <- eval expr
   case v1 of
     VarReg (reg, refID, typ) -> do
+      debug $ "old id" ++ show refID
       setVar (reg, refID, typ) v2
       case v2 of
         VarReg (_, refID2, _) -> do
           modifyVars (\(mapp, ref) -> (Map.insert (sIdentToString sIdent) (reg, refID2, typ) mapp, ref))
-        _ -> return ()
+        x -> error $  "unexpected type " ++ show x
     x -> error $ "unexpected type " ++ show x
+  debugGC
   exec xs
 exec (Incr line sIdent : xs) = do
   let e2 = ELitInt line 1

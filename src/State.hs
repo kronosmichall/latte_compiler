@@ -56,7 +56,7 @@ addRef refID = do
 subRef :: RefID -> MyMonad ()
 subRef refID = do
   (ref, mapp) <- getRefs
-  modifyRefs (\(ref, mapp) -> (ref, Map.update (\count -> if count > 1 then Just (count - 1) else Nothing) refID mapp))
+  modifyRefs (\(ref, mapp) -> (ref, Map.update (\count -> if count >= 1 then Just (count - 1) else Nothing) refID mapp))
 
 getIDCount :: RefID -> MyMonad RefCount
 getIDCount refID = do
@@ -138,3 +138,13 @@ cleanIDsToFree = do
   (ref, mapp) <- getRefs
   let mapp2 = Map.filter (> 0) mapp
   putRefs (ref, mapp2)
+
+debugGC :: MyMonad ()
+debugGC = do
+  refs <- getRefs
+  vars <- getVars
+  addNoTabInstr $ "; ref map " ++ show refs
+  addNoTabInstr $ "; var map " ++ show vars
+
+debug :: String -> MyMonad ()
+debug str = addNoTabInstr $ "; " ++ str
