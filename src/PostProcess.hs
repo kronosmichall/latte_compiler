@@ -133,9 +133,21 @@ runAll :: [Instr] -> [Instr]
 runAll res = do
   let blocks = splitOn "; topdef-end" (unlines res)
   let blocks2 = map lines blocks
-  let remappedBlocks = map (\b -> remapLabels (getLabelRemap b) b) blocks2
+  let blocks3 = map putAllocaOnTop blocks2
+  let remappedBlocks = map (\b -> remapLabels (getLabelRemap b) b) blocks3
   let res2 = concat remappedBlocks
   let res3 = fixRets res2
   let strMapping = getStrMapping res3
   let res4 = addConstLiterals strMapping ++ res3
   replaceLiterals strMapping res4
+
+putAllocaOnTop :: [Instr] -> [Instr]
+putAllocaOnTop instrs = allocaInstrs ++ otherInstrs
+ where
+  (allocaInstrs, otherInstrs) = splitAlloca instrs
+
+splitAlloca :: [Instr] -> ([Instr], [Instr])
+splitAlloca instrs = (allocaInstrs, otherInstrs)
+ where
+  (allocaInstrs, otherInstrs) = partition isAlloca instrs
+  isAlloca instr = "alloca" `isInfixOf` instr
