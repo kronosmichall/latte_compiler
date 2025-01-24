@@ -3,7 +3,7 @@
 {-# HLINT ignore "Replace case with maybe" #-}
 module PostProcess where
 
-import Data.List (find, intercalate, isInfixOf, nub, stripPrefix)
+import Data.List (find, intercalate, isInfixOf, nub, stripPrefix, partition)
 import Data.List.Split (splitOn)
 import Data.Map hiding (foldl, map)
 import qualified Data.Map as Map hiding (foldl, map)
@@ -133,7 +133,7 @@ runAll :: [Instr] -> [Instr]
 runAll res = do
   let blocks = splitOn "; topdef-end" (unlines res)
   let blocks2 = map lines blocks
-  let blocks3 = map putAllocaOnTop blocks2
+  let blocks3 = map splitAlloca blocks2
   let remappedBlocks = map (\b -> remapLabels (getLabelRemap b) b) blocks3
   let res2 = concat remappedBlocks
   let res3 = fixRets res2
@@ -141,13 +141,16 @@ runAll res = do
   let res4 = addConstLiterals strMapping ++ res3
   replaceLiterals strMapping res4
 
-putAllocaOnTop :: [Instr] -> [Instr]
-putAllocaOnTop instrs = allocaInstrs ++ otherInstrs
- where
-  (allocaInstrs, otherInstrs) = splitAlloca instrs
 
-splitAlloca :: [Instr] -> ([Instr], [Instr])
-splitAlloca instrs = (allocaInstrs, otherInstrs)
+pipeline :: Eq a => [a] -> [a -> Bool] -> [[a]]
+pipeline list [] = [list]
+pipeline list (f : fs) = do
+  let (p1, p2) = Data.List.partition f list 
+  p1 : pipeline p2 fs
+
+splitAlloca :: [Instr] -> [Instr]
+splitAlloca instrs = concat $ pipeline instrs [isConst, isHeader, isAlloca]
  where
-  (allocaInstrs, otherInstrs) = partition isAlloca instrs
   isAlloca instr = "alloca" `isInfixOf` instr
+  isHeader instr = "define " `isInfixOf` instr
+  isConst  instr = " = private constant" `isInfixOf` instr

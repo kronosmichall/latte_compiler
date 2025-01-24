@@ -85,9 +85,9 @@ define i64 @strlen(i8* %str) {
 @.str1 = private constant [12 x i8] c"some string\00"
 @.wrapsize = private constant i64 8
 define i64 @main() {
+	%var2 = alloca i8*
 	%var0= load i64, i64* @.wrapsize
 	%var1 = call i8* @calloc(i64 1, i64 %var0)
-	%var2 = alloca i8*
 	store i8* %var1, i8** %var2
 ; ref map (2,fromList [(1,1)])
 ; var map (fromList [("w",(2,1,i8**))],3)
