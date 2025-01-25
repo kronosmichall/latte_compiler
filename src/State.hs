@@ -129,7 +129,8 @@ combineInstr = intercalate "\n"
 getVarReg :: VarName -> MyMonad VarReg
 getVarReg name = do
   (sts, _) <- getVars
-  case Map.lookup name sts of
+  let name2 = if name == "self" then "selfik" else name
+  case Map.lookup name2 sts of
     Just reg -> return reg
     Nothing -> error $ "Variable " ++ name ++ " not found"
 

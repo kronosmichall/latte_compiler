@@ -5,6 +5,7 @@ int main () {
   printInt(x);
   w.print();
 
+  printInt(w.id().id().id().id().getx());
   return 0;
 }
 
@@ -20,5 +21,7 @@ class Wrap {
     printString("class wrap with getx:");
     printInt(self.getx());
   }
+
+  Wrap id() { return self; }
 }
 

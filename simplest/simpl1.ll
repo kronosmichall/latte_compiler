@@ -132,6 +132,14 @@ define void @Wrap.print(i8* %selfik) {
 	call void @printInt(i64 %var11)
 	ret void
 }
+define i8* @Wrap.id(i8* %selfik) {
+	%var0 = alloca i8*
+
+	store i8* null, i8** %var0
+	store i8* %selfik, i8** %var0
+	%var1 = load i8*, i8** %var0
+	ret i8* %var1
+}
 define i64 @main() {
 	%var2 = alloca i8*
 	%var8 = alloca i64
@@ -152,6 +160,13 @@ define i64 @main() {
 	call void @printInt(i64 %var9)
 	%var11 = load i8*, i8** %var2
 	call void @Wrap.print(i8* %var11)
+	%var13 = load i8*, i8** %var2
+	%var14 = call i8* @Wrap.id(i8* %var13)
+	%var16 = call i8* @Wrap.id(i8* %var14)
+	%var18 = call i8* @Wrap.id(i8* %var16)
+	%var20 = call i8* @Wrap.id(i8* %var18)
+	%var22 = call i64 @Wrap.getx(i8* %var20)
+	call void @printInt(i64 %var22)
 	ret i64 0
 }
 
