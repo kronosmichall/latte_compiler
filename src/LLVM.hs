@@ -357,8 +357,7 @@ eval (EAttr line (Ident obj) attrIdent) = do
 
 eval (ENull _ ) = do
   undefined
-eval (ESelfMet _ _) = do
-  undefined
+eval (ESelfMet line chain) = eval (EMet line Objects.selfIdent chain)
 -- eval (ENull _ (Ident cls)) = do
 --   let typ =
 --         if capitalised cls -- classes
