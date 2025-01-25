@@ -1,0 +1,20 @@
+int main() {
+    {
+        list l = new list;
+        l.name = "list 1";
+
+        {
+            list l2 = new list;
+            l2.name = "list 2 ";
+            l.next = l2;
+        } // no free since l points to l2
+        printString("end of scope 2");
+    } // free all
+
+    return 0;
+}
+
+class list {
+    string name;
+    list next;
+} 

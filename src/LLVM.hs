@@ -12,8 +12,7 @@ import Data.List.Split (splitOn)
 import qualified Data.Map as Map hiding (map)
 
 import Common
-import GHC.OldList (partition)
--- import qualified Objects
+import qualified Objects
 import qualified PostProcess
 import State
 import Types
@@ -60,7 +59,7 @@ newVarNoInit typ name = createVarSetNull name typ
 setVar :: VarReg -> VarVal -> MyMonad ()
 setVar (reg, refID, typ) v1 = do
   newReg <- nextReg
-  v2 <- unwrap v1 
+  v2 <- unwrap v1
   let instr = case v2 of
         VarInt x -> "store i64 " ++ show x ++ ", " ++ show typ ++ " %var" ++ show reg
         VarBool x -> "store i1 " ++ show x ++ ", " ++ show typ ++ " %var" ++ show reg
@@ -358,7 +357,7 @@ eval (EAttr line (Ident obj) attrIdent) = do
 
 eval (ENull _ ) = do
   undefined
-eval (ESelfMet _  chain) = do
+eval (ESelfMet _ _) = do
   undefined
 -- eval (ENull _ (Ident cls)) = do
 --   let typ =
@@ -372,7 +371,26 @@ eval (ESelfMet _  chain) = do
 --   addInstr $ combineInstr [i1, i2]
 --   return $ VarReg (reg, -1, typ)
 
-eval (EMet _ e exprs) = do
+eval (EMet line (Ident obj) chain) = do
+  v1 <- eval (EVar line (Ident obj))
+  v2 <- unwrap v1
+  res <- foldM (evalChain obj) v2 chain
+  return res
+  
+  where
+    evalChain :: VarName -> VarVal -> EChain -> MyMonad VarVal
+    evalChain obj v2 (EChain line sident exprs) = do
+      v3 <- cevalMethChain v2 sident [obj]
+      args <- mapM eval exprs
+      args2 <- mapM unwrap args
+      let methodName = getMethName sident
+      case v3 of 
+        VarReg (reg, ref, MyClass clsName) -> do
+          let funName = clsName ++ "." ++ methodName
+          funApply funName (v3 : args2) 
+        _ -> error "unexpected chain"
+
+eval (EMet _ (Ident obj) [])  = do
   undefined
 --   v1 <- eval e
 --   v2 <- unwrap v1
@@ -384,6 +402,16 @@ eval (EMet _ e exprs) = do
 --         args2 <- mapM unwrap args
 --         funApply funName (v1 : args2)
 --     x-> error $ "unexpected call method for " ++ show x
+
+
+cevalMethChain ::VarVal -> SIdent -> [String] -> MyMonad VarVal
+cevalMethChain v (SIdentAttr line (Ident attr) sident) path = ceval v (SIdentAttr line (Ident attr) sident) path
+cevalMethChain v (SIdent _ (Ident attr)) path = do 
+  return v
+
+getMethName :: SIdent -> String
+getMethName (SIdent _ (Ident name)) = name
+getMethName (SIdentAttr _ (Ident name) sident) = getMethName sident
 
 ceval :: VarVal -> SIdent -> [String] -> MyMonad VarVal
 ceval v (SIdent _ (Ident attr)) path = do
@@ -436,29 +464,65 @@ freeIDs refIDs = do
   let vars = Map.toList sts
   let regs = map snd vars
   let toFree = filter (\(_, ref, _) -> ref `elem` refIDs) regs
-  let toFree2 = filter (\(_, ref, typ) -> "i8*" `isInfixOf` show typ) toFree
-  varVals <- mapM (\(reg, ref, typ) -> unwrap (VarReg (reg, ref, typ))) toFree2
+  let uniq = foldr (\x acc -> if getRefID x `elem` map getRefID acc then acc else x : acc) [] toFree
+  let uniq2= filter isHeapAllocated uniq
+  varVals <- mapM (\(reg, ref, typ) -> unwrap (VarReg (reg, ref, typ))) uniq2
   let instrs = map (\(VarReg (reg, ref, typ)) -> "call void @free (i8* %var" ++ show reg ++ ")") varVals
   addInstr $ combineInstr instrs
+  where
+    getRefID :: VarReg -> RefID
+    getRefID (_, ref, _) = ref
+    isHeapAllocated :: VarReg -> Bool
+    isHeapAllocated (_, ref, typ) = ref /= -1 && "i8*" `isInfixOf` show typ
 
-closeVars :: VarMap -> VarMap -> MyMonad ()
-closeVars mold mnew = do
-  let keys = Map.keys mold
-  let keys2 = Map.keys mnew
-  let keys3 = filter (`notElem` keys2) keys
-  let ids =
-        map
-          ( \k -> case Map.lookup k mold of
-              Just (_, ref, _) -> ref
-              Nothing -> error "Variable not found"
-          )
-          keys3
-  forM_ ids $ \i -> do
-    subRef i
+-- closeVars :: VarMap -> VarMap -> MyMonad ()
+-- closeVars mold mnew = do
+--   let keys = Map.keys mold
+--   let keys2 = Map.keys mnew
+--   let keys3 = filter (`notElem` keys2) keys
+--   let baseKeys = filter (\x -> not $ "." `isInfixOf` x) keys3
+--   debug $ "decrementing base vars " ++ show baseKeys
+--   baseIDs <- mapM (`getRef` mold) baseKeys
+--   let keysWithIds = zip baseKeys baseIDs
+--   forM_ baseIDs $ \i -> do
+--     subRef i
+
+--   refMap <- getRefMap
+--   let zeroedKeysWithIds = filter (\(k,kid) -> refMap Map.! kid == 0) keysWithIds
+--   let zeroKeys = map fst zeroedKeysWithIds
+--   let nestedKeys = concatMap (\x -> filter (isPrefixOf $ x ++ ".") keys3) zeroKeys
+--   nestedIDs <- mapM (`getRef` mold) nestedKeys
+
+
+--   debug $ "decrementing nested vars " ++ show nestedKeys
+--   forM_ nestedIDs $ \i -> do
+--     subRef i
+
+--   where
+--     getRef :: String -> VarMap -> MyMonad RefID
+--     getRef k mapp = case Map.lookup k mapp of
+--               Just (_, ref, _) -> return ref
+--               Nothing -> error "Variable not found"
+
 
 sIdentToString :: SIdent -> String
 sIdentToString (SIdent _ (Ident name)) = name
 sIdentToString (SIdentAttr _ (Ident name) sIdent) = name ++ "." ++ sIdentToString sIdent
+
+mapEndingVars :: VarMap -> VarMap -> MyMonad ()
+mapEndingVars vold vnew = do
+  let kold = Map.keys vold
+  let knew = Map.keys vnew
+  let kdiff = filter (`notElem` knew) kold
+  forM_ kdiff mapEndingVar
+
+  where
+    mapEndingVar :: String -> MyMonad ()
+    mapEndingVar name = do
+      (reg, ref, typ) <- getVarReg name
+      let newName = show reg ++ "tofree"
+      modifyVars (\(mapp, ref2) -> (Map.delete name mapp, ref2))
+      modifyVars (\(mapp, ref2) -> (Map.insert newName (reg, ref, typ) mapp, ref2))
 
 exec :: [Stmt] -> MyMonad ()
 exec [] = return ()
@@ -467,12 +531,13 @@ exec (BStmt _ (Block _ stmts) : xs) = do
   (sts, reg) <- getVars
   exec stmts
   (sts2, reg2) <- getVars
-  closeVars sts2 sts
-  idsToFree <- getIDsToFree
-  freeIDs idsToFree
-  cleanIDsToFree
-  putVars (sts, reg2)
-  
+  mapEndingVars sts2 sts
+  -- closeVars sts2 sts
+  -- idsToFree <- getIDsToFree
+  -- freeIDs idsToFree
+  -- cleanIDsToFree
+  -- modifyVars (\(_, reg3) -> (sts, reg3))
+
   debugGC
 
   exec xs
@@ -558,7 +623,6 @@ exec (CondElse _ expr stmt1 stmt2 : xs) = do
     x -> error $ "unexpected type" ++ show x
 exec (While line expr stmt : xs) = do
   res1 <- getRes
-  let len1 = length res1
   let l0 = show line ++ "while"
   let i0 = "br label %" ++ l0
   addInstr i0
@@ -730,9 +794,10 @@ execProgram (Program _ topdefs) = do
   forM_ strs initStr
   let cls = getClsDef topdefs
   forM_ cls initCls
-  -- let classFuns = concatMap Objects.convertMethods cls
+  let classFuns = concatMap Objects.convertMethods cls
+  -- error $ show classFuns
   let funs = getFuns topdefs
-  let funs2 = funs -- ++ classFuns
+  let funs2 = funs ++ classFuns
   forM_ funs2 initFun
   forM_ funs2 execFun
   let main = findMain topdefs

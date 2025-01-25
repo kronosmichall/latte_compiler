@@ -21,7 +21,7 @@ executable checker
                     Print,
                     -- TypeChecker,
                     LLVM,
-                    -- Objects,
+                    Objects,
                     Types,
                     PostProcess,
                     State,

@@ -1,23 +1,29 @@
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 module State where
 
-import Types
 import Control.Monad.State
-import qualified Data.Map.Strict as Map
 import Data.List (intercalate)
+import qualified Data.Map.Strict as Map
+import Types
 
 type VarState = (VarMap, NextRef)
 type TopDefState = (FunMap, StructMap, ClassMap)
-type RefState = (RefID, Map.Map RefID RefCount)
+-- type RefState = (RefID, Map.Map RefID RefCount)
+data RefState = RefState {
+  nextID :: RefID,
+  refMap :: Map.Map RefID (RefCount, [RefID])
+} deriving (Show)
+
 type MyState = (VarState, TopDefState, [Instr], RefState)
 type MyMonad = State MyState
 
 newState :: TopDefState -> MyState
 newState topDefs = do
   let vars = (Map.empty, 0)
-  let refs = (1, Map.empty)
+  let refs = RefState { nextID = 1, refMap = Map.empty }
   let res = []
   (vars, topDefs, res, refs)
-  
+
 modifyVars :: (VarState -> VarState) -> MyMonad ()
 modifyVars fun = modify (\(v, t, r, ref) -> (fun v, t, r, ref))
 
@@ -39,31 +45,56 @@ getTopDefs = gets (\(_, t, _, _) -> t)
 getRes :: MyMonad [Instr]
 getRes = gets (\(_, _, r, _) -> r)
 
+getRefMap :: MyMonad (Map.Map RefID (RefCount, [RefID]))
+getRefMap = do
+  refMap <$> getRefs
+
+addDep :: RefID -> RefID -> MyMonad ()
+addDep refID depID = do
+  refs <- getRefs
+  let mapp = refMap refs
+  case Map.lookup refID mapp of
+    Just (count, deps) -> modifyRefs (\r -> r { refMap = Map.insert refID (count, depID:deps) mapp })
+    Nothing -> error $ "cannot add dep form a key " ++ show refID ++ "that does not exist; to " ++ show depID
+    -- modifyRefs (\r -> r { refMap = Map.insert refID (1, [depID]) mapp })
+
 getRefs :: MyMonad RefState
 getRefs = gets (\(_, _, _, ref) -> ref)
 
 getRefIDIncrement :: MyMonad RefID
 getRefIDIncrement = do
-  (refID, mapp) <- getRefs
-  modifyRefs (\(refID, mapp) -> (refID + 1, mapp))
-  return refID
+  refs <- getRefs
+  let refID' = nextID refs
+  modifyRefs (\r -> r { nextID = refID' + 1 })
+  return refID'
 
 addRef :: RefID -> MyMonad ()
 addRef refID = do
-  (ref, mapp) <- getRefs
-  modifyRefs (\(ref, mapp) -> (ref, Map.insertWith (+) refID 1 mapp))
+  refs <- getRefs
+  let mapp = refMap refs
+  modifyRefs (\r -> r { refMap = Map.insertWith (\newVal (count, deps) -> (count+1, deps)) refID (1, []) mapp })
 
 subRef :: RefID -> MyMonad ()
 subRef refID = do
-  (ref, mapp) <- getRefs
-  modifyRefs (\(ref, mapp) -> (ref, Map.update (\count -> if count >= 1 then Just (count - 1) else Nothing) refID mapp))
+  refs <- getRefs
+  let mapp = refMap refs
+  modifyRefs (\r -> r { refMap = Map.update (\(count, ids) -> if count > 1 then Just (count - 1, ids) else Nothing) refID mapp })
 
 getIDCount :: RefID -> MyMonad RefCount
 getIDCount refID = do
-  (_, mapp) <- getRefs
+  refs <- getRefs
+  let mapp = refMap refs
   case Map.lookup refID mapp of
-    Just count -> return count
+    Just (count, _) -> return count
     Nothing -> return 0
+
+getIDDeps :: RefID -> MyMonad [RefID]
+getIDDeps refID = do
+  refs <- getRefs
+  let mapp = refMap refs
+  case Map.lookup refID mapp of
+    Just (_, ids) -> return ids
+    Nothing -> return []
 
 putVars :: VarState -> MyMonad ()
 putVars vars = modify (\(_, t, r, ref) -> (vars, t, r, ref))
@@ -89,9 +120,9 @@ addNoTabInstr instr = do
 
 addTopInstr :: Instr -> MyMonad ()
 addTopInstr instr = do
-  let instr2 = if length (lines instr) == 1 then [ instr] else lines instr
+  let instr2 = if length (lines instr) == 1 then [instr] else lines instr
   modifyRes (instr2 ++)
-  
+
 combineInstr :: [Instr] -> Instr
 combineInstr = intercalate "\n"
 
@@ -114,7 +145,7 @@ addReg = do
 
 getRegIncrement :: MyMonad Register
 getRegIncrement = do
-  (sts, reg) <- getVars
+  (_, reg) <- getVars
   addReg
   return reg
 
@@ -129,15 +160,17 @@ lastInstr = do
 
 getIDsToFree :: MyMonad [RefID]
 getIDsToFree = do
-  (ref, mapp) <- getRefs
-  let keys = Map.keys $ Map.filter (== 0) mapp
-  return $ filter (>= 1) keys
+  ref <- getRefs
+  let mapp = refMap ref
+  return $ Map.keys $ Map.filter (\(count, _) -> count == 0) mapp
 
 cleanIDsToFree :: MyMonad ()
 cleanIDsToFree = do
-  (ref, mapp) <- getRefs
-  let mapp2 = Map.filter (> 0) mapp
-  putRefs (ref, mapp2)
+  ref <- getRefs
+  let mapp = refMap ref
+  let refID' = nextID ref
+  let mapp2 = Map.filter (\(count, _) -> count > 0) mapp
+  putRefs (RefState { nextID = refID', refMap = mapp2})
 
 debugGC :: MyMonad ()
 debugGC = do

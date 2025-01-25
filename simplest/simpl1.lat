@@ -1,15 +1,24 @@
 int main () {
-  string s1 = "lala";
-  string s2 = s1;
-  printString(s1);
-  printString(s2);
-  s1 = "new 1";
-  printString(s1);
-  printString(s2);
-  s2 = "new 2";
-  printString(s1);
-  printString(s2);
+  Wrap w = new Wrap;
+  w.setx(2);
+  int x = w.getx();
+  printInt(x);
+  w.print();
 
   return 0;
+}
+
+class Wrap {
+  int x;
+
+  int getx() { return x; }
+
+  void setx(int y) { x = y; }
+  void print() {
+    printString("class wrap with x:");
+    printInt(x);
+    printString("class wrap with getx:");
+    printInt(self.getx());
+  }
 }
 

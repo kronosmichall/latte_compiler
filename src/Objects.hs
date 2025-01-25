@@ -6,6 +6,9 @@ where
 import Abs
 import Data.Maybe
 
+selfIdent :: Ident
+selfIdent = Ident "selfik"
+
 convertMethods :: TopDef -> [TopDef]
 convertMethods (CTopDef _ clsIdent (CBlock line cdefs)) = do
   let methods = filter isMethod cdefs
@@ -22,7 +25,7 @@ convertMethod clsDef attrNames (MthDef line ret (Ident name) args (Block line2 s
   case clsDef of
     CTopDef _ (Ident clsName) _ -> do
       let clsTyp = Class line (Ident clsName)
-      let clsArg = Arg line clsTyp (Ident "self")
+      let clsArg = Arg line clsTyp selfIdent
       let args2 = clsArg : args
       let stmts2 = convertStmt attrNames stmts
       let block2 = Block line2 stmts2
@@ -35,20 +38,20 @@ convertMethod _ _ _ = Nothing
 
 
 convertStmt :: [String] -> [Stmt] -> [Stmt]
-convertStmt attrNames (Ass line varExpr expr:xs) = do
-  let e1 = convertExpr attrNames varExpr
+convertStmt _ [] = []
+convertStmt attrNames (Ass line sident expr:xs) = do
+  let s1 = convertSIdent attrNames sident
   let e2 = convertExpr attrNames expr
-  Ass line e1 e2 : convertStmt attrNames xs
-convertStmt attrNames (Incr line varExpr:xs) = do
-  let e1 = convertExpr attrNames varExpr
-  Incr line e1 : convertStmt attrNames xs
-convertStmt attrNames (Decr line varExpr:xs) = do
-  let e1 = convertExpr attrNames varExpr
-  Incr line e1 : convertStmt attrNames xs
+  Ass line s1 e2 : convertStmt attrNames xs
+convertStmt attrNames (Incr line sident:xs) = do
+  let s1 = convertSIdent attrNames sident
+  Incr line s1 : convertStmt attrNames xs
+convertStmt attrNames (Decr line sident:xs) = do
+  let s1 = convertSIdent attrNames sident
+  Incr line s1 : convertStmt attrNames xs
 convertStmt attrNames (Ret line expr : xs) = do
   let e1 = convertExpr attrNames expr
   Ret line e1 : convertStmt attrNames xs
-convertStmt _ [] = []
 convertStmt attrNames (Empty _ : xs) = convertStmt attrNames xs
 convertStmt attrNames (BStmt _ (Block _ stmts) : xs) = convertStmt attrNames (stmts ++ xs)
 convertStmt attrNames (Cond line expr stmt : xs) = do
@@ -56,7 +59,7 @@ convertStmt attrNames (Cond line expr stmt : xs) = do
   let s1 = convertStmt attrNames [stmt]
   let s12 = BStmt BNFC'NoPosition (Block BNFC'NoPosition s1)
   Cond line e1 s12 : convertStmt attrNames xs
-convertStmt attrNames (CondElse line expr stmt1 stmt2 : xs) = do 
+convertStmt attrNames (CondElse line expr stmt1 stmt2 : xs) = do
   let e1 = convertExpr attrNames expr
   let s1 = convertStmt attrNames [stmt1]
   let s2 = convertStmt attrNames [stmt2]
@@ -68,16 +71,44 @@ convertStmt attrNames (While line expr stmt : xs) = do
   let s1 = convertStmt attrNames [stmt]
   let s12 = BStmt BNFC'NoPosition (Block BNFC'NoPosition s1)
   While line e1 s12 : convertStmt attrNames xs
-convertStmt attrNames (SExp line expr : xs) = do 
+convertStmt attrNames (SExp line expr : xs) = do
   let e1 = convertExpr attrNames expr
   SExp line e1 : convertStmt attrNames xs
-convertStmt attrNames (e : xs) = e : convertStmt attrNames xs 
+convertStmt attrNames (e : xs) = e : convertStmt attrNames xs
+
 
 convertExpr :: [String] -> Expr -> Expr
 convertExpr attrNames (EVar line (Ident name)) =
   if name `elem` attrNames
     then do
-      let e = EVar BNFC'NoPosition (Ident "self")
-      EAttr BNFC'NoPosition e (Ident name)
+      let e = EVar BNFC'NoPosition selfIdent
+      EAttr BNFC'NoPosition selfIdent (SIdent line (Ident name))
     else EVar line (Ident name)
+convertExpr attrNames (EApp line (Ident name) exprs) = do
+  let exprs2 = map (convertExpr attrNames) exprs
+  EApp line (Ident name) exprs2
 convertExpr _ e = e
+
+convertSIdent :: [String] -> SIdent -> SIdent
+convertSIdent attrNames (SIdent line (Ident attr)) =
+  if attr `elem` attrNames
+    then do
+      SIdentAttr line selfIdent (SIdent line (Ident attr))
+    else SIdent line (Ident attr)
+convertSIdent attrNames (SIdentAttr line (Ident attr) attrs) = do 
+  if attr `elem` attrNames
+    then do
+      SIdentAttr line selfIdent (SIdentAttr line (Ident attr) attrs)
+    else SIdent line (Ident attr)
+
+convertSIdent2 :: [String] -> SIdent -> Expr
+convertSIdent2 attrNames (SIdent line (Ident attr)) =
+  if attr `elem` attrNames
+    then do
+      EAttr BNFC'NoPosition selfIdent (SIdent line (Ident attr))
+    else EVar line (Ident attr)
+convertSIdent2 attrNames (SIdentAttr line (Ident attr) attrs) = do 
+  if attr `elem` attrNames
+    then do
+      EAttr BNFC'NoPosition selfIdent (SIdentAttr line (Ident attr) attrs)
+    else EVar line (Ident attr)
